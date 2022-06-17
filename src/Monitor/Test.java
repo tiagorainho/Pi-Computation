@@ -1,14 +1,15 @@
 package Monitor;
 
+import java.io.IOException;
 import java.util.List;
 
+import Common.Entities.EServiceNode;
 import Monitor.Entities.EMonitor;
-import Monitor.Entities.EServiceNode;
 import Monitor.Interfaces.IMonitor;
 
 class Test {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
 
 
         // create nodes
@@ -23,9 +24,8 @@ class Test {
         // create monitor
         final int heartBeatWindowSize = 3;
         final int heartBeatPeriod = 1000;
-        final int weightPerNode = 2;
 
-        IMonitor monitor = new EMonitor(heartBeatWindowSize, heartBeatPeriod, weightPerNode);
+        IMonitor monitor = new EMonitor(99, heartBeatWindowSize, heartBeatPeriod);
 
         // test
         try {

@@ -1,27 +1,82 @@
 package Monitor.Entities;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Set;
 
+import Common.Entities.EMessage;
+import Common.Entities.EServiceNode;
+import Common.Enums.EMessageType;
 import Monitor.Interfaces.IMonitor;
-import Monitor.Interfaces.IServiceDiscovery;
 
-public class EMonitor implements IMonitor, IServiceDiscovery {
+public class EMonitor extends Thread implements IMonitor {
 
     private final EServiceDiscovery serviceDiscovery;
     private final Map<String, Set<EServiceNode>> servicesDependencies;
     private final int heartBeatWindowSize;
     private final int heartBeatPeriod;
+    private final ServerSocket socket;
 
-    public EMonitor(int heartBeatWindowSize, int heartBeatPeriod, int weightPerNode) {
+    public EMonitor(int port, int heartBeatWindowSize, int heartBeatPeriod) throws IOException {
+        this.socket = new ServerSocket(port);
         this.heartBeatWindowSize = heartBeatWindowSize;
         this.heartBeatPeriod = heartBeatPeriod;
-        this.serviceDiscovery = new EServiceDiscovery(weightPerNode);
+        this.serviceDiscovery = new EServiceDiscovery();
         this.servicesDependencies = new HashMap<>();
+    }
+
+    @Override
+    public void run() {
+        System.out.printf("Monitor listening on port %d\n", this.socket.getLocalPort());
+
+        while (true) {
+            try {
+                Socket clientSocket = this.socket.accept();
+                new Thread(() -> {
+                    serveClient(clientSocket);
+                }).start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void serveClient(Socket clientSocket) {
+        try {
+            ObjectOutputStream output = new ObjectOutputStream(clientSocket.getOutputStream());
+            ObjectInputStream input = new ObjectInputStream(clientSocket.getInputStream());
+            EMessage message = (EMessage) input.readObject();
+
+            switch(message.getMessageType()) {
+
+                case RegisterServiceRegistry:
+
+                    // process incoming message
+                    String req = (String) message.getMessage();
+                    String parts[] =  req.split("-");
+                    String serviceName = parts[0];
+                    int port = Integer.parseInt(parts[1]);
+
+                    // registry service
+                    EServiceNode registriedNode = this.registry(serviceName, port);
+
+                    // provide response
+                    EMessage response = new EMessage(EMessageType.ResponseServiceRegistry, registriedNode);
+                    output.writeObject(response);
+                    break;
+            }
+        }
+        catch(IOException | ClassNotFoundException e) {
+
+        }
+        
     }
 
     @Override
@@ -33,9 +88,10 @@ public class EMonitor implements IMonitor, IServiceDiscovery {
 
                 // send heart beat
                 // here
-                throw new Exception();
+                //throw new Exception();
+                
                 // restart counter when there is a correct response
-                //counter = 0;
+                counter = 0;
             }
             catch(Exception e) {
                 counter++;
@@ -98,11 +154,6 @@ public class EMonitor implements IMonitor, IServiceDiscovery {
         }).start();
 
         return node;
-    }
-
-    @Override
-    public EServiceNode request(String serviceName, int weight) throws NoSuchElementException {
-        return this.serviceDiscovery.request(serviceName, weight);
     }
     
 }

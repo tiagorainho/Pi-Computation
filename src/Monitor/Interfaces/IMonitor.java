@@ -2,7 +2,7 @@ package Monitor.Interfaces;
 
 import java.util.List;
 
-import Monitor.Entities.EServiceNode;
+import Common.Entities.EServiceNode;
 
 public interface IMonitor {
     

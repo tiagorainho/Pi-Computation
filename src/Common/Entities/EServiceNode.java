@@ -1,8 +1,10 @@
-package Monitor.Entities;
+package Common.Entities;
 
-import Monitor.Interfaces.IServiceNode;
+import java.io.Serializable;
 
-public class EServiceNode implements IServiceNode {
+import Common.Interfaces.IServiceNode;
+
+public class EServiceNode implements IServiceNode, Serializable {
 
     private final int id;
     private final String serviceName;
@@ -28,7 +30,7 @@ public class EServiceNode implements IServiceNode {
         return this.port;
     }
 
-    public int getID() {
+    public Integer getID() {
         return this.id;
     }
 

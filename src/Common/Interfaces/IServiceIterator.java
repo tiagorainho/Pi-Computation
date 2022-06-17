@@ -1,4 +1,4 @@
-package Monitor.Interfaces;
+package Common.Interfaces;
 
 public interface IServiceIterator<E> {
 
