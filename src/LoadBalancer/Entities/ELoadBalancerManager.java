@@ -1,8 +1,6 @@
 package LoadBalancer.Entities;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
@@ -46,7 +44,7 @@ public class ELoadBalancerManager extends Thread {
             e.printStackTrace();
         }
 
-        EMessage message, response;
+        EMessage response;
 
         try {
             // registry load balancer
@@ -69,7 +67,22 @@ public class ELoadBalancerManager extends Thread {
             }
 
             // wait until it becomes the main load balancer
-            while(this.node.getPort() != masterLoadBalancerPort) {
+            this.waitUntilMaster(serviceRegistryPort);
+
+            // start load balancing thread
+            this.run();
+        }
+        catch(Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void waitUntilMaster(int serviceRegistryPort) {
+        EMessage message;
+
+        // wait until it becomes the main load balancer
+        while(this.node.getPort() != masterLoadBalancerPort) {
+            try {
                 Socket newConn = this.serverSocket.accept();
                 TSocket temporarySocket = new TSocket(newConn);
 
@@ -120,22 +133,21 @@ public class ELoadBalancerManager extends Thread {
                             ));
 
                             // verify if update request was unsuccessfull
-                            response = (EMessage) requestUpdateSocket.receive();
+                            message = (EMessage) requestUpdateSocket.receive();
                             requestUpdateSocket.close();
 
                             // analyse response
-                            if(response.getMessageType() != EMessageType.ResponseUpdateServiceRegistry) {
+                            if(message.getMessageType() != EMessageType.ResponseUpdateServiceRegistry) {
                                 this.logger.log(String.format("Request Error"), EColor.RED);
                                 break;
                             }
 
-                            EServiceNode possiblyUpdatedNode = (EServiceNode) response.getMessage();
+                            EServiceNode possiblyUpdatedNode = (EServiceNode) message.getMessage();
                             if(possiblyUpdatedNode == null) {
                                 this.logger.log(String.format("Requested Node not Found"), EColor.RED);
                                 break;
                             }
 
-                            System.out.println("--------------- passou");
                             this.logger.log(String.format("Response from the master: %s", possiblyUpdatedNode.toString()));
 
                             if(!possiblyUpdatedNode.equals(proposedServiceNode)) {
@@ -153,20 +165,14 @@ public class ELoadBalancerManager extends Thread {
                             this.serverSocket = new ServerSocket(this.node.getPort());
                             this.logger.log(String.format("Master Load Balancer started on port %d", this.node.getPort()));
                         }
-                        
                     break;
                 }
                 temporarySocket.close();
             }
-            System.out.println("----- ###### " + this.node.toString());
-
-            // start load balancing thread
-            this.run();
+            catch(IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
         }
-        catch(Exception e) {
-            e.printStackTrace();
-        }
-        
     }
 
     @Override

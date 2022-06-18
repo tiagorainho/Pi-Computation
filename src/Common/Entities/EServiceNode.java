@@ -1,15 +1,11 @@
 package Common.Entities;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
+import Common.Interfaces.IDeepCopyable;
 import Common.Interfaces.IServiceNode;
 
-public class EServiceNode implements IServiceNode, Serializable {
+public class EServiceNode implements IServiceNode, Serializable, IDeepCopyable {
 
     private final int id;
     private final String serviceName;
@@ -71,24 +67,6 @@ public class EServiceNode implements IServiceNode, Serializable {
             && this.getPort().equals(node.getPort())
             && this.getServiceName().equals(node.getServiceName())
             && this.isActive() == this.isActive();
-    }
-    
-    public EServiceNode deepCopy() {
-        EServiceNode node = null;
-        try {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(bos);
-            oos.writeObject(this);
-            oos.flush();
-            oos.close();
-            bos.close();
-            byte[] byteData = bos.toByteArray();
-            ByteArrayInputStream bais = new ByteArrayInputStream(byteData);
-            node = (EServiceNode) new ObjectInputStream(bais).readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        return node;
     }
 
 }
