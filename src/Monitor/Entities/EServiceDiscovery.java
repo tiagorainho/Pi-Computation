@@ -3,7 +3,6 @@ package Monitor.Entities;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,6 +22,16 @@ public class EServiceDiscovery implements IServiceDiscovery {
         this.servicesNodes = new HashMap<>();
         this.nodes = new HashMap<>();
         this.nodeCounter = 0;
+    }
+
+    public EServiceNode update(EServiceNode nodeToUpdate) {
+        List<EServiceNode> nodes = this.servicesNodes.get(nodeToUpdate.getServiceName());
+        for(EServiceNode node: nodes) {
+            if(node.getID().equals(nodeToUpdate.getID())) {
+                node = nodeToUpdate;
+            }
+        }
+        return null;
     }
 
     public EServiceNode getNodeByID(int id) {

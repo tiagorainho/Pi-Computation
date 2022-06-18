@@ -10,5 +10,7 @@ public interface ISocket<E> {
     E receive() throws ClassNotFoundException, IOException;
 
     Socket getSocket();
+
+    void close() throws IOException;
     
 }

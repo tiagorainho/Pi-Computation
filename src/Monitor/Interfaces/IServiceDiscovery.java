@@ -12,5 +12,7 @@ public interface IServiceDiscovery {
      * @return A reference to the registry.
      */
     EServiceNode registry(String serviceName, int port);
+
+    EServiceNode update(EServiceNode nodeToUpdate);
     
 }

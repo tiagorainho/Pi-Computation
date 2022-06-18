@@ -41,7 +41,7 @@ public class ELoadBalancerManager extends Thread {
         this.loadBalancer = new ELoadBalancer(weightPerNode);
         TSocket socket = null;
         try {
-            socket = new TSocket(address, serviceRegistryPort);
+            socket = new TSocket(serviceRegistryPort);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -57,7 +57,7 @@ public class ELoadBalancerManager extends Thread {
 
             // receive response
             response = (EMessage) socket.receive();
-            socket.getSocket().close();
+            socket.close();
             
             // consume the response
             switch(response.getMessageType()) {
@@ -70,28 +70,33 @@ public class ELoadBalancerManager extends Thread {
 
             // wait until it becomes the main load balancer
             while(this.node.getPort() != masterLoadBalancerPort) {
-                TSocket temporarySocket = new TSocket(this.serverSocket.accept());
+                Socket newConn = this.serverSocket.accept();
+                TSocket temporarySocket = new TSocket(newConn);
 
-                message = (EMessage) temporarySocket.receive();
+                message = temporarySocket.receive();
 
-                switch(response.getMessageType()) {
-
-                    case Heartbeat:
+                switch(message.getMessageType()) {
+                    case Heartbeat -> {
                         this.logger.log(String.format("HeartBeat: Waiting"), EColor.GREEN);
-                        response = new EMessage(EMessageType.Heartbeat, null);
-                        temporarySocket.send(response);
-                    break;
+                        temporarySocket.send(new EMessage(EMessageType.Heartbeat, null));
+                    }
 
-                    case TopologyChange:
+                    case TopologyChange -> {
                         List<EServiceNode> registeredNodes = (List<EServiceNode>) message.getMessage();
                         if(registeredNodes.size() == 0) break;
+
+                        for(EServiceNode a: registeredNodes) {
+                            System.out.println(a.toString());
+                        }
 
                         // update the depencies state
                         String updatedService = registeredNodes.get(0).getServiceName();
                         this.dependenciesState.put(updatedService, registeredNodes);
 
                         // break if the updated service is not a load balancer
-                        if(updatedService != LBserviceName) break;
+                        if(!updatedService.equals(LBserviceName)) break;
+
+                        this.logger.log(String.format("%s will update its master", LBserviceName), EColor.RED);
 
                         // get the minimum id of the list of load balancers
                         EServiceNode minNode = registeredNodes.stream().min((node1, node2) -> {
@@ -101,18 +106,44 @@ public class ELoadBalancerManager extends Thread {
                         // start work on server socket if is the node with the minimum id
                         if(minNode.getID() == this.node.getID()) {
 
-                            // send server registry an update on the port
+                            // get the proposed node
                             EServiceNode proposedServiceNode = this.node;
                             proposedServiceNode.updatePort(this.masterLoadBalancerPort);
-                            temporarySocket.send(new EMessage(
+
+                            this.logger.log(String.format("Request change %s -> %s to master", minNode.toString(), proposedServiceNode.toString()), EColor.GREEN);
+
+                            // send server registry an update on the port
+                            TSocket requestUpdateSocket = new TSocket(serviceRegistryPort);
+                            requestUpdateSocket.send(new EMessage(
                                 EMessageType.RequestUpdateServiceRegistry,
                                 proposedServiceNode
                             ));
 
                             // verify if update request was unsuccessfull
-                            response = (EMessage) temporarySocket.receive();
+                            response = (EMessage) requestUpdateSocket.receive();
+                            requestUpdateSocket.close();
+
+                            // analyse response
+                            if(response.getMessageType() != EMessageType.ResponseUpdateServiceRegistry) {
+                                this.logger.log(String.format("Request Error"), EColor.RED);
+                                break;
+                            }
+
                             EServiceNode possiblyUpdatedNode = (EServiceNode) response.getMessage();
-                            if(possiblyUpdatedNode.equals(proposedServiceNode)) break;
+                            if(possiblyUpdatedNode == null) {
+                                this.logger.log(String.format("Requested Node not Found"), EColor.RED);
+                                break;
+                            }
+
+                            System.out.println("--------------- passou");
+                            this.logger.log(String.format("Response from the master: %s", possiblyUpdatedNode.toString()));
+
+                            if(!possiblyUpdatedNode.equals(proposedServiceNode)) {
+                                this.logger.log(String.format("Request not accepted"), EColor.RED);
+                                break;
+                            }
+
+                            this.logger.log(String.format("%s updated to master with success", this.LBserviceName), EColor.GREEN);
 
                             // update node
                             this.node = possiblyUpdatedNode;
@@ -120,11 +151,12 @@ public class ELoadBalancerManager extends Thread {
                             // close sockets
                             this.serverSocket.close();
                             this.serverSocket = new ServerSocket(this.node.getPort());
+                            this.logger.log(String.format("Master Load Balancer started on port %d", this.node.getPort()));
                         }
-                        System.out.println("Master Load Balancer started on port " + this.node.getPort());
-                    break;
+                        
+                    }
                 }
-                temporarySocket.getSocket().close();
+                temporarySocket.close();
             }
 
             // start load balancing thread
@@ -142,8 +174,17 @@ public class ELoadBalancerManager extends Thread {
         while (true) {
             try {
                 Socket clientSocket = this.serverSocket.accept();
+                TSocket auxSocket = new TSocket(clientSocket);
                 new Thread(() -> {
-                    serveRequest(clientSocket);
+                    try {
+                        serveRequest(auxSocket);
+                    } finally {
+                        try {
+                            auxSocket.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }).start();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -151,31 +192,21 @@ public class ELoadBalancerManager extends Thread {
         }
     }
 
-    public void serveRequest(Socket socket) {
+    public void serveRequest(TSocket socket) {
         try {
-            ObjectOutputStream output = new ObjectOutputStream(socket.getOutputStream());
-            ObjectInputStream input = new ObjectInputStream(socket.getInputStream());
-            EMessage message = (EMessage) input.readObject();
+            EMessage message = socket.receive();
 
             switch(message.getMessageType()) {
 
                 case Heartbeat:
                     this.logger.log("HeartBeat: Working", EColor.GREEN);
-                    output.writeObject(new EMessage(EMessageType.Heartbeat, null));
+                    socket.send(new EMessage(EMessageType.Heartbeat, null));
                 break;
-                    
+
             }
-            socket.close();
         }
         catch(IOException | ClassNotFoundException e) {
             e.printStackTrace();
-        }
-        finally {
-            try {
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
     }
 

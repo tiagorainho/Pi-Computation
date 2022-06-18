@@ -12,24 +12,21 @@ import Common.Interfaces.ISocketRunner;
 public class TSocket extends Thread implements ISocket<EMessage> {
 
     private final Socket socket;
-    private final ObjectInputStream in;
-    private final ObjectOutputStream out;
+    private ObjectInputStream in = null;
+    private ObjectOutputStream out = null;
     static final String defaultAddress = "localhost";
     
     private ISocketRunner runnable;
 
     public TSocket(Socket socket) throws IOException {
         this.socket = socket;
-        this.out = new ObjectOutputStream(socket.getOutputStream());
-        this.in = new ObjectInputStream(socket.getInputStream());
+        this.out = new ObjectOutputStream(this.socket.getOutputStream());
+        this.in = new ObjectInputStream(this.socket.getInputStream());
     }
     
     public TSocket(String address, int port, ISocketRunner runnable) throws IOException {
+        this(new Socket(address, port));
         this.runnable = runnable;
-
-        this.socket = new Socket(address, port);
-        this.out = new ObjectOutputStream(socket.getOutputStream());
-        this.in = new ObjectInputStream(socket.getInputStream());
     }
 
     public Socket getSocket() {
@@ -41,15 +38,22 @@ public class TSocket extends Thread implements ISocket<EMessage> {
     }
 
     public TSocket(int port) throws IOException {
-        this(TSocket.defaultAddress, port, (ObjectInputStream in, ObjectOutputStream out) -> {});
+        this(TSocket.defaultAddress, port);
     }
 
     public void send(EMessage payload) throws IOException {
         this.out.writeObject(payload);
+        this.out.flush();
     }
 
     public EMessage receive() throws ClassNotFoundException, IOException {
         return (EMessage) this.in.readObject();
+    }
+
+    public void close() throws IOException {
+        this.out.close();
+        this.in.close();
+        this.socket.close();
     }
 
     @Override

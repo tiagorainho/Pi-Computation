@@ -11,6 +11,7 @@ public enum EMessageType {
     RegisterServiceRegistry,
     ResponseServiceRegistry,
     RequestUpdateServiceRegistry,
+    ResponseUpdateServiceRegistry,
     TopologyChange,
     Heartbeat
 

@@ -11,7 +11,7 @@ class Test {
 
     public static void main(String[] args) throws IOException {
 
-
+        /*
         // create nodes
         final EServiceNode[] nodes = new EServiceNode[] {
             new EServiceNode(1, "lb", 10),
@@ -59,6 +59,8 @@ class Test {
         System.out.println("\n -------------------");
         System.out.println("| Testes passados!! |");
         System.out.println(" -------------------");
+
+         */
     }
 }
 

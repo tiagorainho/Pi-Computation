@@ -1,8 +1,6 @@
 package Monitor.Entities;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
@@ -14,6 +12,8 @@ import java.util.Set;
 import Common.Entities.EMessage;
 import Common.Entities.EMessageRegistry;
 import Common.Entities.EServiceNode;
+import Common.Entities.SingletonLogger;
+import Common.Enums.EColor;
 import Common.Enums.EMessageType;
 import Common.Threads.TSocket;
 import Monitor.Interfaces.IMonitor;
@@ -25,6 +25,7 @@ public class EMonitor extends Thread implements IMonitor {
     private final int heartBeatWindowSize;
     private final int heartBeatPeriod;
     private final ServerSocket socket;
+    private final SingletonLogger logger = SingletonLogger.getInstance();
 
     public EMonitor(int port, int heartBeatWindowSize, int heartBeatPeriod) throws IOException {
         this.socket = new ServerSocket(port);
@@ -42,7 +43,11 @@ public class EMonitor extends Thread implements IMonitor {
             try {
                 Socket clientSocket = this.socket.accept();
                 new Thread(() -> {
-                    serveClient(clientSocket);
+                    try {
+                        serveClient(new TSocket(clientSocket));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }).start();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -50,11 +55,9 @@ public class EMonitor extends Thread implements IMonitor {
         }
     }
 
-    public void serveClient(Socket clientSocket) {
+    public void serveClient(TSocket clientSocket) {
         try {
-            ObjectOutputStream output = new ObjectOutputStream(clientSocket.getOutputStream());
-            ObjectInputStream input = new ObjectInputStream(clientSocket.getInputStream());
-            EMessage message = (EMessage) input.readObject();
+            EMessage message = clientSocket.receive();
 
             switch(message.getMessageType()) {
 
@@ -66,41 +69,67 @@ public class EMonitor extends Thread implements IMonitor {
                     // registry service
                     EServiceNode registriedNode = this.serviceDiscovery.registry(registry.getServiceName(), registry.getPort());
 
+                    // save its dependencies
+                    this.dependencies(registriedNode.getID(), registry.getDependencies());
+
                     // provide response
                     EMessage response = new EMessage(EMessageType.ResponseServiceRegistry, registriedNode);
-                    output.writeObject(response);
+                    clientSocket.send(response);
 
-                    // start heartbeat
+                    // start heartbeat                    
                     new Thread(() -> {
-                        this.heartBeat(registriedNode);
+                        try {
+                            this.heartBeat(registriedNode);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }).start();
                 }
+
+                case RequestUpdateServiceRegistry -> {
+
+                    EServiceNode nodeToUpdate = (EServiceNode) message.getMessage();
+
+                    this.logger.log(String.format("Request to Update: %s", nodeToUpdate));
+
+                    // try to update
+                    EServiceNode updatedNode = this.serviceDiscovery.update(nodeToUpdate);
+                    if(updatedNode == null) {
+                        this.logger.log(String.format("Not accepted update: %s", nodeToUpdate.toString()), EColor.RED);
+                        clientSocket.send(new EMessage(EMessageType.ResponseUpdateServiceRegistry, null));
+                    }
+                    else {
+                        this.logger.log(String.format("Accepted update: %s", nodeToUpdate.toString()), EColor.GREEN);
+                        clientSocket.send(new EMessage(EMessageType.ResponseUpdateServiceRegistry, nodeToUpdate));
+                    }
+                }
             }
-        }
-        catch(IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        finally {
             try {
                 clientSocket.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+        catch(IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
-    public void heartBeat(EServiceNode node) {
+    public void heartBeat(EServiceNode node) throws IOException {
         int counter = 0;
+        TSocket heartBeatSocket = null;
+
         while(counter < this.heartBeatWindowSize) {
-            TSocket heartBeatSocket = null;
             try {
                 Thread.sleep(this.heartBeatPeriod);
 
-                // send heart beat
+                this.logger.log(String.format("Heartbeat -> %d", node.getPort()));
                 heartBeatSocket = new TSocket(node.getPort());
+                
                 //// heartBeatSocket.getSocket().setSoTimeout(1000);
 
+                // send heart beat
                 heartBeatSocket.send(new EMessage(EMessageType.Heartbeat, null));
 
                 // check response
@@ -113,37 +142,45 @@ public class EMonitor extends Thread implements IMonitor {
             catch(InterruptedException e) { }
             catch(IOException | ClassNotFoundException e) {
                 counter++;
-                System.out.println(String.format("Service %s -> %d", node.toString(), counter));
+                this.logger.log(String.format("Service %s -> %d", node.toString(), counter));
             }
         }
         node.deactivate();
-        System.out.println(String.format("Service %s deactivated", node.toString()));
+        this.logger.log(String.format("Service %s deactivated", node.toString()));
         this.topologyChange(node.getServiceName());
     }
 
     @Override
     public void topologyChange(String serviceName) {
 
+        this.logger.log(String.format("Topology change in the service: %s", serviceName), EColor.RED);
+
         // updated service nodes
         List<EServiceNode> updatedNodes = this.serviceDiscovery.getServiceNodesByService(serviceName);
 
+        // remove non active nodes
+        for(EServiceNode node: updatedNodes)
+            if(!node.isActive())
+                updatedNodes.remove(node);
+
         // create msg to send
-        String msg = "";
-        for(EServiceNode node: updatedNodes) {
-            if(node.isActive()) {
-                msg += String.format("%d,%s,%d|", node.getID(), node.getServiceName(), node.getPort());
-            }
-        }
+        EMessage message = new EMessage(EMessageType.TopologyChange, updatedNodes);
 
         // nodes to send the notification
         Set<EServiceNode> nodesToNotify = this.servicesDependencies.getOrDefault(serviceName, new HashSet<>());
 
         // send message with all the current nodes
-        for(EServiceNode node: nodesToNotify) {
-            if(node.isActive()) {
-                System.out.println("Node " + node.getID() + " -> " + msg);
+        for(EServiceNode nodeToNotify: nodesToNotify) {
+            if(!nodeToNotify.isActive()) continue;
+            try {
+                TSocket auxSocket = new TSocket(new Socket("localhost", nodeToNotify.getPort()));
+                auxSocket.send(message);
+                this.logger.log(String.format("Sent Topology change to node %s", nodeToNotify.toString()));
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
+        
     }
 
     @Override
