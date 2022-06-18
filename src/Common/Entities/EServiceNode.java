@@ -1,5 +1,10 @@
 package Common.Entities;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
 import Common.Interfaces.IServiceNode;
@@ -68,4 +73,22 @@ public class EServiceNode implements IServiceNode, Serializable {
             && this.isActive() == this.isActive();
     }
     
+    public EServiceNode deepCopy() {
+        EServiceNode node = null;
+        try {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(bos);
+            oos.writeObject(this);
+            oos.flush();
+            oos.close();
+            bos.close();
+            byte[] byteData = bos.toByteArray();
+            ByteArrayInputStream bais = new ByteArrayInputStream(byteData);
+            node = (EServiceNode) new ObjectInputStream(bais).readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return node;
+    }
+
 }

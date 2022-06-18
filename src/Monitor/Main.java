@@ -8,7 +8,6 @@ import Monitor.Interfaces.IMonitor;
 public class Main {
     
     public static void main(String[] args) {
-
         // create monitor
         final int heartBeatWindowSize = 3;
         final int heartBeatPeriod = 1000;

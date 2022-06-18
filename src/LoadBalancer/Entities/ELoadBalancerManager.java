@@ -76,12 +76,12 @@ public class ELoadBalancerManager extends Thread {
                 message = temporarySocket.receive();
 
                 switch(message.getMessageType()) {
-                    case Heartbeat -> {
+                    case Heartbeat:
                         this.logger.log(String.format("HeartBeat: Waiting"), EColor.GREEN);
                         temporarySocket.send(new EMessage(EMessageType.Heartbeat, null));
-                    }
+                    break;
 
-                    case TopologyChange -> {
+                    case TopologyChange:
                         List<EServiceNode> registeredNodes = (List<EServiceNode>) message.getMessage();
                         if(registeredNodes.size() == 0) break;
 
@@ -107,7 +107,7 @@ public class ELoadBalancerManager extends Thread {
                         if(minNode.getID() == this.node.getID()) {
 
                             // get the proposed node
-                            EServiceNode proposedServiceNode = this.node;
+                            EServiceNode proposedServiceNode = this.node.deepCopy();
                             proposedServiceNode.updatePort(this.masterLoadBalancerPort);
 
                             this.logger.log(String.format("Request change %s -> %s to master", minNode.toString(), proposedServiceNode.toString()), EColor.GREEN);
@@ -154,10 +154,11 @@ public class ELoadBalancerManager extends Thread {
                             this.logger.log(String.format("Master Load Balancer started on port %d", this.node.getPort()));
                         }
                         
-                    }
+                    break;
                 }
                 temporarySocket.close();
             }
+            System.out.println("----- ###### " + this.node.toString());
 
             // start load balancing thread
             this.run();
