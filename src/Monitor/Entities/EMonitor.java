@@ -12,8 +12,10 @@ import java.util.Map;
 import java.util.Set;
 
 import Common.Entities.EMessage;
+import Common.Entities.EMessageRegistry;
 import Common.Entities.EServiceNode;
 import Common.Enums.EMessageType;
+import Common.Threads.TSocket;
 import Monitor.Interfaces.IMonitor;
 
 public class EMonitor extends Thread implements IMonitor {
@@ -56,48 +58,66 @@ public class EMonitor extends Thread implements IMonitor {
 
             switch(message.getMessageType()) {
 
-                case RegisterServiceRegistry:
+                case RegisterServiceRegistry -> {
 
                     // process incoming message
-                    String req = (String) message.getMessage();
-                    String parts[] =  req.split("-");
-                    String serviceName = parts[0];
-                    int port = Integer.parseInt(parts[1]);
+                    EMessageRegistry registry = (EMessageRegistry) message;
 
                     // registry service
-                    EServiceNode registriedNode = this.registry(serviceName, port);
+                    EServiceNode registriedNode = this.serviceDiscovery.registry(registry.getServiceName(), registry.getPort());
 
                     // provide response
                     EMessage response = new EMessage(EMessageType.ResponseServiceRegistry, registriedNode);
                     output.writeObject(response);
-                    break;
+
+                    // start heartbeat
+                    new Thread(() -> {
+                        this.heartBeat(registriedNode);
+                    }).start();
+                }
             }
         }
         catch(IOException | ClassNotFoundException e) {
-
+            e.printStackTrace();
         }
-        
+        finally {
+            try {
+                clientSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     @Override
     public void heartBeat(EServiceNode node) {
         int counter = 0;
         while(counter < this.heartBeatWindowSize) {
+            TSocket heartBeatSocket = null;
             try {
                 Thread.sleep(this.heartBeatPeriod);
 
                 // send heart beat
-                // here
-                //throw new Exception();
-                
-                // restart counter when there is a correct response
-                counter = 0;
+                heartBeatSocket = new TSocket(node.getPort());
+                //// heartBeatSocket.getSocket().setSoTimeout(1000);
+
+                heartBeatSocket.send(new EMessage(EMessageType.Heartbeat, null));
+
+                // check response
+                EMessage response = (EMessage) heartBeatSocket.receive();
+                if(response.getMessageType() == EMessageType.Heartbeat) {
+                    // restart counter when there is a correct response
+                    counter = 0;
+                }
             }
-            catch(Exception e) {
+            catch(InterruptedException e) { }
+            catch(IOException | ClassNotFoundException e) {
                 counter++;
+                System.out.println(String.format("Service %s -> %d", node.toString(), counter));
             }
         }
         node.deactivate();
+        System.out.println(String.format("Service %s deactivated", node.toString()));
         this.topologyChange(node.getServiceName());
     }
 
@@ -105,18 +125,18 @@ public class EMonitor extends Thread implements IMonitor {
     public void topologyChange(String serviceName) {
 
         // updated service nodes
-        EServiceNodes updatedNodes = this.serviceDiscovery.getServiceNodesByService(serviceName);
+        List<EServiceNode> updatedNodes = this.serviceDiscovery.getServiceNodesByService(serviceName);
 
         // create msg to send
         String msg = "";
-        for(EServiceNode node: updatedNodes.getNodes()) {
+        for(EServiceNode node: updatedNodes) {
             if(node.isActive()) {
                 msg += String.format("%d,%s,%d|", node.getID(), node.getServiceName(), node.getPort());
             }
         }
 
         // nodes to send the notification
-        Set<EServiceNode> nodesToNotify = this.servicesDependencies.get(serviceName);
+        Set<EServiceNode> nodesToNotify = this.servicesDependencies.getOrDefault(serviceName, new HashSet<>());
 
         // send message with all the current nodes
         for(EServiceNode node: nodesToNotify) {
@@ -124,7 +144,6 @@ public class EMonitor extends Thread implements IMonitor {
                 System.out.println("Node " + node.getID() + " -> " + msg);
             }
         }
-        
     }
 
     @Override
@@ -141,19 +160,6 @@ public class EMonitor extends Thread implements IMonitor {
                 this.servicesDependencies.put(serviceName, nodes);
             }
         }
-    }
-    
-    @Override
-    public EServiceNode registry(String serviceName, int port) {
-        // registry service node
-        EServiceNode node = this.serviceDiscovery.registry(serviceName, port);
-        
-        // start heartbeat
-        new Thread(() -> {
-            this.heartBeat(node);
-        }).start();
-
-        return node;
     }
     
 }

@@ -5,8 +5,6 @@ import java.util.List;
 import Common.Entities.EServiceNode;
 
 public interface IMonitor {
-    
-    EServiceNode registry(String serviceName, int port);
 
     void topologyChange(String serviceName);
 

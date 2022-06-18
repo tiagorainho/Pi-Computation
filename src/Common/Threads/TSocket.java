@@ -17,6 +17,12 @@ public class TSocket extends Thread implements ISocket<EMessage> {
     static final String defaultAddress = "localhost";
     
     private ISocketRunner runnable;
+
+    public TSocket(Socket socket) throws IOException {
+        this.socket = socket;
+        this.out = new ObjectOutputStream(socket.getOutputStream());
+        this.in = new ObjectInputStream(socket.getInputStream());
+    }
     
     public TSocket(String address, int port, ISocketRunner runnable) throws IOException {
         this.runnable = runnable;
@@ -24,8 +30,6 @@ public class TSocket extends Thread implements ISocket<EMessage> {
         this.socket = new Socket(address, port);
         this.out = new ObjectOutputStream(socket.getOutputStream());
         this.in = new ObjectInputStream(socket.getInputStream());
-
-        System.out.println("Comunications has started on " + address + ":" + port);
     }
 
     public Socket getSocket() {

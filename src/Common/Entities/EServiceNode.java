@@ -26,7 +26,7 @@ public class EServiceNode implements IServiceNode, Serializable {
         return this.serviceName;
     }
 
-    public int getPort() {
+    public Integer getPort() {
         return this.port;
     }
 
@@ -44,6 +44,28 @@ public class EServiceNode implements IServiceNode, Serializable {
 
     public void activate() {
         this.active = true;
+    }
+
+    @Override
+    public String toString() {
+        String color = this.isActive() ? "\u001B[32m" : "\u001B[31m";
+        return String.format("%s[%s-%d]:%d \u001B[0m", color, this.serviceName, this.id, this.port);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj == this)
+            return true;
+        
+        if(!(obj instanceof EServiceNode))
+            return false;
+        
+        EServiceNode node = (EServiceNode) obj;
+
+        return this.getID().equals(node.getID())
+            && this.getPort().equals(node.getPort())
+            && this.getServiceName().equals(node.getServiceName())
+            && this.isActive() == this.isActive();
     }
     
 }
