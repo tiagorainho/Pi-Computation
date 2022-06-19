@@ -1,20 +1,19 @@
-package LoadBalancer;
+package PiComputator;
 
-import LoadBalancer.Entities.ELoadBalancerManager;
+import PiComputator.Entities.EServerManager;
 
 public class Main {
-    
+
     public static void main(String[] args) {
         
-        ELoadBalancerManager lb = new ELoadBalancerManager();
+        EServerManager server = new EServerManager();
         
         try {
-            lb.startLoadBalancer(100, 2, 200);
+            server.startServer(100, 300);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
         
     }
-
+    
 }
-

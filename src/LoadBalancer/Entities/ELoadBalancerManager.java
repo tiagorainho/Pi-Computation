@@ -23,20 +23,21 @@ public class ELoadBalancerManager extends Thread {
     private final String address = "localhost";
     private EServiceNode node;
     private ServerSocket serverSocket;
-    private int masterLoadBalancerPort = 200;
+    private int masterLoadBalancerPort;
     private final String LBserviceName = "LoadBalancer";
     private final String ComputationServiceName = "computation";
     private final List<String> dependencies = List.of(LBserviceName, ComputationServiceName);
     public final Map<String, List<EServiceNode>> dependenciesState;
-
     private final SingletonLogger logger = SingletonLogger.getInstance();
 
     public ELoadBalancerManager() {
         this.dependenciesState = new HashMap<>();
     }
 
-    public void startLoadBalancer(int serviceRegistryPort, int weightPerNode) {
+    public void startLoadBalancer(int serviceRegistryPort, int weightPerNode, int masterLoadBalancerPort) throws Exception {
         
+        this.masterLoadBalancerPort = masterLoadBalancerPort;
+
         // try to connect to service registry
         this.loadBalancer = new ELoadBalancer(weightPerNode);
         TSocket socket = null;
@@ -44,6 +45,8 @@ public class ELoadBalancerManager extends Thread {
             socket = new TSocket(serviceRegistryPort);
         } catch (IOException e) {
             e.printStackTrace();
+            this.logger.log(String.format("Error connecting to Monitor on port %d", serviceRegistryPort));
+            throw new Exception(String.format("Error connecting to monitor on port %d", serviceRegistryPort));
         }
 
         EMessage response;
