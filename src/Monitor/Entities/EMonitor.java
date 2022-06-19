@@ -3,8 +3,11 @@ package Monitor.Entities;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -13,6 +16,7 @@ import Common.Entities.EMessage;
 import Common.Entities.EMessageRegistry;
 import Common.Entities.EServiceNode;
 import Common.Entities.SingletonLogger;
+import Common.Entities.TopologyChangePayload;
 import Common.Enums.EColor;
 import Common.Enums.EMessageType;
 import Common.Threads.TSocket;
@@ -94,14 +98,12 @@ public class EMonitor extends Thread implements IMonitor {
 
                     // try to update
                     EServiceNode updatedNode = this.serviceDiscovery.update(nodeToUpdate);
-                    if(updatedNode == null) {
-                        this.logger.log(String.format("Not accepted update: %s", nodeToUpdate.toString()), EColor.RED);
-                        clientSocket.send(new EMessage(EMessageType.ResponseUpdateServiceRegistry, null));
-                    }
-                    else {
-                        this.logger.log(String.format("Accepted update: %s", nodeToUpdate.toString()), EColor.GREEN);
-                        clientSocket.send(new EMessage(EMessageType.ResponseUpdateServiceRegistry, nodeToUpdate));
-                    }
+
+                    boolean accepted = updatedNode != null;
+                    this.logger.log(String.format("Update%s accepted: %s", accepted? "": " not", nodeToUpdate.toString()), accepted? EColor.GREEN: EColor.RED );
+
+                    // send response
+                    clientSocket.send(new EMessage(EMessageType.ResponseUpdateServiceRegistry, nodeToUpdate));
                 }
             }
             try {
@@ -158,13 +160,10 @@ public class EMonitor extends Thread implements IMonitor {
         // updated service nodes
         List<EServiceNode> updatedNodes = this.serviceDiscovery.getServiceNodesByService(serviceName);
 
-        // remove non active nodes
-        for(EServiceNode node: updatedNodes)
-            if(!node.isActive())
-                updatedNodes.remove(node);
+        //List<EServiceNode> updatedNodes = new ArrayList<>(serviceNodes.size());
 
         // create msg to send
-        EMessage message = new EMessage(EMessageType.TopologyChange, updatedNodes);
+        EMessage message = new EMessage(EMessageType.TopologyChange, new TopologyChangePayload(serviceName, updatedNodes));
 
         // nodes to send the notification
         Set<EServiceNode> nodesToNotify = this.servicesDependencies.getOrDefault(serviceName, new HashSet<>());

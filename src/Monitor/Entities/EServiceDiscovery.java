@@ -26,12 +26,37 @@ public class EServiceDiscovery implements IServiceDiscovery {
 
     public EServiceNode update(EServiceNode nodeToUpdate) {
         List<EServiceNode> nodes = this.servicesNodes.get(nodeToUpdate.getServiceName());
-        for(EServiceNode node: nodes) {
+
+        Integer portToSwitch = nodeToUpdate.getPort();
+        boolean hasPortConflict = false;
+        EServiceNode desiredNode = null;
+        
+        for (EServiceNode node: nodes) {
+
+            // ignore inactive nodes
+            if(!node.isActive()) continue;
+
+            // break if the port to switch to is in use
+            if(portToSwitch.equals(node.getPort())) {
+                hasPortConflict = true;
+            }
+
+            // find the node before update by its ID
             if(node.getID().equals(nodeToUpdate.getID())) {
-                node = nodeToUpdate;
+                desiredNode = node;
             }
         }
-        return null;
+
+        // check if node was found
+        if(desiredNode == null) return null;
+
+        // check for port conflicts
+        if(hasPortConflict) return desiredNode;
+
+        // update the node with the new port number
+        desiredNode.updatePort(nodeToUpdate.getPort());
+
+        return desiredNode;
     }
 
     public EServiceNode getNodeByID(int id) {

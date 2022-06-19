@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -11,6 +12,7 @@ import Common.Entities.EMessage;
 import Common.Entities.EMessageRegistry;
 import Common.Entities.EServiceNode;
 import Common.Entities.SingletonLogger;
+import Common.Entities.TopologyChangePayload;
 import Common.Enums.EColor;
 import Common.Enums.EMessageType;
 import Common.Threads.TSocket;
@@ -78,9 +80,8 @@ public class ELoadBalancerManager extends Thread {
     }
 
     private void waitUntilMaster(int serviceRegistryPort) {
-        EMessage message;
+        EMessage message=null;
 
-        // wait until it becomes the main load balancer
         while(this.node.getPort() != masterLoadBalancerPort) {
             try {
                 Socket newConn = this.serverSocket.accept();
@@ -95,21 +96,30 @@ public class ELoadBalancerManager extends Thread {
                     break;
 
                     case TopologyChange:
-                        List<EServiceNode> registeredNodes = (List<EServiceNode>) message.getMessage();
-                        if(registeredNodes.size() == 0) break;
+                        TopologyChangePayload payload = (TopologyChangePayload) message.getMessage();
 
-                        for(EServiceNode a: registeredNodes) {
-                            System.out.println(a.toString());
-                        }
+                        List<EServiceNode> registeredNodes = payload.getNodes();
+                        String updatedService = payload.getServiceName();
 
                         // update the depencies state
-                        String updatedService = registeredNodes.get(0).getServiceName();
                         this.dependenciesState.put(updatedService, registeredNodes);
 
                         // break if the updated service is not a load balancer
                         if(!updatedService.equals(LBserviceName)) break;
 
                         this.logger.log(String.format("%s will update its master", LBserviceName), EColor.RED);
+
+                        // remove inactive nodes
+                        for (Iterator<EServiceNode> iterator = registeredNodes.iterator(); iterator.hasNext(); ) {
+                            if(!iterator.next().isActive()) {
+                                iterator.remove();
+                            }
+                        }
+
+                        System.out.println("registeredNodes:");
+                        for(EServiceNode n: registeredNodes) {
+                            System.out.println(n.toString());
+                        }
 
                         // get the minimum id of the list of load balancers
                         EServiceNode minNode = registeredNodes.stream().min((node1, node2) -> {
