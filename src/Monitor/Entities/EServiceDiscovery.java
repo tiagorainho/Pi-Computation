@@ -1,15 +1,15 @@
 package Monitor.Entities;
 
+import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import Common.Entities.EServiceNode;
 import Monitor.Interfaces.IServiceDiscovery;
-import Monitor.Utils.Utils;
 
 public class EServiceDiscovery implements IServiceDiscovery {
 
@@ -72,28 +72,29 @@ public class EServiceDiscovery implements IServiceDiscovery {
     }
     
     @Override
-    public EServiceNode registry(String serviceName, int port) {
+    public EServiceNode registry(String serviceName, Integer port) {
         int desiredPort = port;
 
         // get the list of nodes with the respective service name
         List<EServiceNode> serviceNodes = this.servicesNodes.getOrDefault(serviceName, new ArrayList<>());
 
         // check if the port is not available, if not then generate a new port
-        if(!Utils.portIsAvailable(port)) {
-
-            List<Integer> portsInUse = new ArrayList<>();
-            
-            // remove ports already in use
-            Iterator<EServiceNode> it = serviceNodes.iterator();
-            while(it.hasNext()) {
-                portsInUse.add(it.next().getPort());
+        boolean portAvailable = true;
+        for(EServiceNode node: serviceNodes) {
+            if(node.getPort().equals(port)) {
+                portAvailable = false;
+                break;
             }
-
-            // generate random port until find one available
-            do {
-                port = Utils.getRandomWithExclusion(0, 10000, portsInUse);
-                portsInUse.add(port);
-            } while((!Utils.portIsAvailable(port)));
+        }
+        if(!portAvailable) {
+            // port += serviceNodes.size();
+            try {
+                ServerSocket s = new ServerSocket(0);
+                port = s.getLocalPort();
+                s.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         // create a new service node

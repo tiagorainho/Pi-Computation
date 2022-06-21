@@ -1,8 +1,12 @@
 package Client;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 
 import Common.Entities.EComputationPayload;
 import Common.Entities.EMessage;
@@ -20,8 +24,8 @@ public class Main {
             ServerSocket serverSocket = new ServerSocket(serverPort);
             new Thread(() -> { run(serverSocket); }).start();
 
-            for(int i=0;i<20;i++) {
-                Thread.sleep(1000);
+            for(int i=20;i<50;i++) {
+                Thread.sleep(500);
                 System.out.println("Enviado computation payload");
                 try {
                     TSocket s = new TSocket(200);
@@ -31,7 +35,8 @@ public class Main {
                     s.close();
                 }
                 catch(Exception e) {
-
+                    System.err.println("Voltou p tras");
+                    i--;
                 }
                 
             }

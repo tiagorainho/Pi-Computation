@@ -11,7 +11,7 @@ public interface IServiceDiscovery {
      * @param serviceName The name of the service to be registered.
      * @return A reference to the registry.
      */
-    EServiceNode registry(String serviceName, int port);
+    EServiceNode registry(String serviceName, Integer port);
 
     EServiceNode update(EServiceNode nodeToUpdate);
     

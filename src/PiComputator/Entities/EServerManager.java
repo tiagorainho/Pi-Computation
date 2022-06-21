@@ -21,6 +21,8 @@ public class EServerManager extends Thread {
     private EServiceNode node;
     private final EComputationServer server;
     private ServerSocket serverSocket;
+    private final int sendRetrials = 3;
+    private final int retrialWaitPeriod = 500;
 
     public EServerManager() {
         this.server = new EComputationServer();
@@ -52,12 +54,10 @@ public class EServerManager extends Thread {
             socket.close();
             
             // consume the response
-            switch(response.getMessageType()) {
-                case ResponseServiceRegistry:
-                    this.node  = (EServiceNode) response.getMessage();
-                    this.logger.log(String.format("Registry received: %s", this.node));
-                    this.serverSocket = new ServerSocket(this.node.getPort());
-                    break;
+            if(response.getMessageType() == EMessageType.ResponseServiceRegistry) {
+                this.node  = (EServiceNode) response.getMessage();
+                this.logger.log(String.format("Registry received: %s", this.node));
+                this.serverSocket = new ServerSocket(this.node.getPort());
             }
         }
         catch(IOException e) {
@@ -87,6 +87,7 @@ public class EServerManager extends Thread {
                     }
                 }).start();
             } catch (IOException e) {
+                System.out.println("aqui");
                 e.printStackTrace();
             }
         }
@@ -122,10 +123,22 @@ public class EServerManager extends Thread {
 
                         request.setCode(3);
 
-                        // notify the load balancer
-                        TSocket lbErrorSocket = new TSocket(loadBalancerPort);
-                        lbErrorSocket.send(response);
-                        lbErrorSocket.close();
+                        // notify the load balancer with N retrials
+                        for(int i=0; i<this.sendRetrials;i++) {
+                            try {
+                                TSocket lbErrorSocket = new TSocket(loadBalancerPort);
+                                lbErrorSocket.send(response);
+                                lbErrorSocket.close();
+                                this.logger.log(String.format("Success sending Error Response to Load Balancer: %s", response),EColor.GREEN);
+                                break;
+                            }
+                            catch(IOException e) {
+                                this.logger.log(String.format("Error sending Error Response to Load Balancer: %s", response), EColor.RED);
+                                try {
+                                    Thread.sleep(retrialWaitPeriod);
+                                } catch (InterruptedException e1) {}
+                            }
+                        }
                         break;
                     }
 
@@ -136,11 +149,23 @@ public class EServerManager extends Thread {
 
                     this.logger.log(String.format("Sending success response to Load Balancer on port %d: %s", loadBalancerPort, response.toString()), EColor.GREEN);
 
-                    // notify the load balancer
-                    TSocket lbResultSocket = new TSocket(loadBalancerPort);
-                    lbResultSocket.send(response);
-                    lbResultSocket.close();
-
+                    // notify the load balancer with N retrials
+                    for(int i=0; i<this.sendRetrials;i++) {
+                        try {
+                            TSocket lbResultSocket = new TSocket(loadBalancerPort);
+                            lbResultSocket.send(response);
+                            lbResultSocket.close();
+                            this.logger.log(String.format("Success sending response to Load Balancer: %s", response),EColor.GREEN);
+                            break;
+                        }
+                        catch(IOException e) {
+                            this.logger.log(String.format("Error sending success response to Load Balancer: %s", response),EColor.RED);
+                            try {
+                                Thread.sleep(retrialWaitPeriod);
+                            } catch (InterruptedException e1) {}
+                        }
+                    }
+                    
                     // respond to the final client
                     this.logger.log(String.format("Sending Computation Response for client on port %d: %s", request.getClientPort(), response));
                     TSocket finalClientSocket = new TSocket(request.getClientPort());

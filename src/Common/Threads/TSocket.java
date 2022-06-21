@@ -1,6 +1,7 @@
 package Common.Threads;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
@@ -21,7 +22,8 @@ public class TSocket extends Thread implements ISocket<EMessage> {
     public TSocket(Socket socket) throws IOException {
         this.socket = socket;
         this.out = new ObjectOutputStream(this.socket.getOutputStream());
-        this.in = new ObjectInputStream(this.socket.getInputStream());
+        InputStream a = this.socket.getInputStream();
+        this.in = new ObjectInputStream(a);
     }
     
     public TSocket(String address, int port, ISocketRunner runnable) throws IOException {
