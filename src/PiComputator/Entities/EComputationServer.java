@@ -38,9 +38,12 @@ public class EComputationServer {
 
         // wait for the computation
         try {
-            cond.wait();
+            this.lock.lock();
+            cond.await();
         } catch (InterruptedException e) {
             e.printStackTrace();
+        } finally {
+            this.lock.unlock();
         }
 
         return request.getPI();
@@ -66,10 +69,19 @@ public class EComputationServer {
             BigDecimal piValueRightDecimalPlaces = piValue.setScale(request.getIterations(), RoundingMode.HALF_UP);
             request.setPI(piValueRightDecimalPlaces.doubleValue());
 
-            this.logger.log(String.format("Computation Thread %d: retrieved %d", id, piValueRightDecimalPlaces.doubleValue()));
+            this.logger.log(String.format("Computation Thread %d - Computed: %s", id, piValueRightDecimalPlaces.toString()));
             
             // signal the condition for the requestPI to continue its work
-            request.condition.signal();
+            try {
+                this.lock.lock();
+                request.condition.signal();
+            } catch(Exception e) {
+                e.printStackTrace();
+            } finally {
+                this.lock.unlock();
+            }
+            
+            
         }
     }
 

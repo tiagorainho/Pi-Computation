@@ -28,10 +28,16 @@ public class ELoadBalancer implements IServiceIterator<EServiceNode> {
 
     public void updateNodes(List<EServiceNode> nodes) {
         this.nodes = nodes;
+        for(EServiceNode node: nodes) {
+            if(!this.nodesWeight.containsKey(node.getID())) {
+                this.nodesWeight.put(node.getID(), 0);
+            }
+        }
     }
 
     @Override
     public boolean hasNext() {
+        System.out.println(this.nodes);
         for(EServiceNode node: this.nodes)
             if(node.isActive())
                 return true;

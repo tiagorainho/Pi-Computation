@@ -3,6 +3,7 @@ package Monitor.Entities;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -77,7 +78,7 @@ public class EMonitor extends Thread implements IMonitor {
                     EMessage response = new EMessage(EMessageType.ResponseServiceRegistry, registriedNode);
                     clientSocket.send(response);
 
-                    // start heartbeat                    
+                    // start heartbeat
                     new Thread(() -> {
                         try {
                             this.heartBeat(registriedNode);
@@ -91,6 +92,24 @@ public class EMonitor extends Thread implements IMonitor {
                         Thread.sleep(500);
                     } catch (InterruptedException e) {}
                     this.topologyChange(registriedNode.getServiceName());
+
+                    // notify about dependencies to newly created node
+                    for(String dependencyServiceName: registry.getDependencies()) {
+                        this.logger.log(String.format("Dependency notification of service %s to node %s", dependencyServiceName, registriedNode.toString()));
+                        new Thread(() -> {
+                            List<EServiceNode> nodesToSend = new ArrayList<EServiceNode>(this.servicesDependencies.get(dependencyServiceName));
+
+                            // send notification
+                            try {
+                                TSocket dependencyNotificationSocket = new TSocket(registriedNode.getID());
+                                dependencyNotificationSocket.send(new EMessage(EMessageType.TopologyChange, new TopologyChangePayload(dependencyServiceName, nodesToSend)));
+                                dependencyNotificationSocket.close();
+                            } catch(IOException e) {
+                                e.printStackTrace();
+                            };
+                        }).start();
+                        
+                    }
                 }
 
                 case RequestUpdateServiceRegistry -> {
@@ -124,6 +143,8 @@ public class EMonitor extends Thread implements IMonitor {
     public void heartBeat(EServiceNode node) throws IOException {
         int counter = 0;
         TSocket heartBeatSocket = null;
+
+        this.logger.log(String.format("Heartbeat started on %s", node.toString()), EColor.GREEN);
 
         while(counter < this.heartBeatWindowSize) {
             try {

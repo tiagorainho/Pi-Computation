@@ -3,7 +3,6 @@ package LoadBalancer.Entities;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -11,7 +10,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import Common.Entities.EComputationPayload;
 import Common.Entities.EMessage;
@@ -257,7 +255,7 @@ public class ELoadBalancerManager extends Thread {
                         if(node.isActive())
                             activeComputationNodesIDs.add(node.getID());
                     
-
+                    // fetch rejected payloads by server being down
                     List<EComputationPayload> rejectedPayloads = new LinkedList<>();
                     for(EComputationPayload payload: this.pendingComputations.values()) {
                         if(activeComputationNodesIDs.contains(payload.getServerID())) continue;
@@ -269,6 +267,7 @@ public class ELoadBalancerManager extends Thread {
                     if(rejectedPayloads.size() > 0)
                         this.logger.log(String.format("Computation Server: %d error%s", rejectedPayloads.size(), (rejectedPayloads.size()>1)?"s":""), EColor.RED);
 
+                    // handle payloads which its computation server went down
                     for(EComputationPayload rejectedPayload: rejectedPayloads) {
                         
                         // if there is still active servers
@@ -295,6 +294,8 @@ public class ELoadBalancerManager extends Thread {
 
                 case ComputationRequest -> {
                     EComputationPayload computationPayload = (EComputationPayload) message.getMessage();
+
+                    computationPayload.setLoadBalancerPort(this.node.getPort());
                 
                     this.logger.log(String.format("Computation request on %s: %s", this.node.toString(), computationPayload.toString()), EColor.GREEN);
 
@@ -343,7 +344,7 @@ public class ELoadBalancerManager extends Thread {
                 case ComputationResult -> {
                     EComputationPayload computationResultPayload = (EComputationPayload) message.getMessage();
 
-                    this.logger.log(String.format("Computation Result on request ID %d -> %d", computationResultPayload.getRequestID(), computationResultPayload.getPI()), EColor.GREEN);
+                    this.logger.log(String.format("Computation Result on request ID %d -> %s", computationResultPayload.getRequestID(), computationResultPayload.getPI().toString()), EColor.GREEN);
 
                     this.pendingComputations.remove(computationResultPayload.getRequestID());
                 }

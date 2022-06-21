@@ -16,6 +16,7 @@ public class EComputationPayload implements IDeepCopyable, Serializable {
     // bellow variables will be zero on the request
     private Integer serverID;
     private Double pi;
+    private Integer loadBalancerPort;
    
     public EComputationPayload(Integer clientPort, Integer code, Integer clientID, Integer requestID, Integer iteractions, Integer deadline) {
         this.clientPort = clientPort;
@@ -29,6 +30,7 @@ public class EComputationPayload implements IDeepCopyable, Serializable {
     public void setPI(Double pi) { this.pi = pi; }
     public void setServerID(Integer id) { this.serverID = id; }
     public void setCode(Integer code) { this.code = code; }
+    public void setLoadBalancerPort(Integer port) { this.loadBalancerPort = port; }
     
     public Integer getClientPort() { return this.clientPort; }
     public Integer getClientID() { return this.clientID; }
@@ -36,6 +38,7 @@ public class EComputationPayload implements IDeepCopyable, Serializable {
     public Integer getIteractions() { return this.iteractions; }
     public Integer getDeadline() { return this.deadline; }
     public Integer getCode() { return this.code; }
+    public Integer getLoadbalancerPort() { return this.loadBalancerPort; }
     public Integer getServerID() { return this.serverID; }
     public Double getPI() { return this.pi; }
 

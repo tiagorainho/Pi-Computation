@@ -30,7 +30,7 @@ public class TSocket extends Thread implements ISocket<EMessage> {
     }
 
     public Integer getPort() {
-        return this.socket.getPort();
+        return this.socket.getLocalPort();
     }
 
     public Socket getSocket() {

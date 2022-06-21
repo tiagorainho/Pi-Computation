@@ -110,19 +110,33 @@ public class EServerManager extends Thread {
                     EComputationPayload request = (EComputationPayload) message.getMessage();
                     request.setServerID(this.node.getID());
 
+                    Integer loadBalancerPort = request.getLoadbalancerPort();
+
                     Double pi = this.server.computePI(request.getIteractions(), request.getDeadline());
 
                     // create response message based on the success of the compute PI operation
                     if(pi == null) {
-                        response = new EMessage(EMessageType.ComputationRejection, null);
+                        response = new EMessage(EMessageType.ComputationRejection, request);
                         
-                        // notify the loadbalancer
-                        this.logger.log(String.format("Sending error response to port %d: %s", socket.getPort(), response.toString()));
-                        socket.send(response);
+                        this.logger.log(String.format("Sending error response to Load Balancer on port %d: %s", loadBalancerPort, response.toString()), EColor.RED);
+
+                        // notify the load balancer
+                        TSocket lbErrorSocket = new TSocket(loadBalancerPort);
+                        lbErrorSocket.send(response);
+                        lbErrorSocket.close();
+                        break;
                     }
 
                     request.setPI(pi);
+
                     response = new EMessage(EMessageType.ComputationResult, request);
+
+                    this.logger.log(String.format("Sending success response to Load Balancer on port %d: %s", loadBalancerPort, response.toString()), EColor.GREEN);
+
+                    // notify the load balancer
+                    TSocket lbResultSocket = new TSocket(loadBalancerPort);
+                    lbResultSocket.send(response);
+                    lbResultSocket.close();
 
                     // respond to the final client
                     this.logger.log(String.format("Sending Computation Response for client on port %d: %s", request.getClientPort(), response));
