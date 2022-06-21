@@ -24,9 +24,9 @@ public class EMonitor extends Thread implements IMonitor {
 
     private final EServiceDiscovery serviceDiscovery;
     private final Map<String, Set<EServiceNode>> servicesDependencies;
-    private final int heartBeatWindowSize;
-    private final int heartBeatPeriod;
-    private final ServerSocket socket;
+    private int heartBeatWindowSize;
+    private int heartBeatPeriod;
+    private ServerSocket socket;
     private final SingletonLogger logger = SingletonLogger.getInstance();
 
     public EMonitor(int port, int heartBeatWindowSize, int heartBeatPeriod) throws IOException {
@@ -35,6 +35,12 @@ public class EMonitor extends Thread implements IMonitor {
         this.heartBeatPeriod = heartBeatPeriod;
         this.serviceDiscovery = new EServiceDiscovery();
         this.servicesDependencies = new HashMap<>();
+    }
+
+    public void updateMonitor(int port, int heartBeatWindowSize, int heartBeatPeriod) throws IOException {
+        this.socket = new ServerSocket(port);
+        this.heartBeatWindowSize = heartBeatWindowSize;
+        this.heartBeatPeriod = heartBeatPeriod;
     }
 
     @Override
