@@ -95,13 +95,14 @@ public class EMonitor extends Thread implements IMonitor {
 
                     // notify about dependencies to newly created node
                     for(String dependencyServiceName: registry.getDependencies()) {
-                        this.logger.log(String.format("Dependency notification of service %s to node %s", dependencyServiceName, registriedNode.toString()));
                         new Thread(() -> {
-                            List<EServiceNode> nodesToSend = new ArrayList<EServiceNode>(this.servicesDependencies.get(dependencyServiceName));
+                            List<EServiceNode> nodesToSend = this.serviceDiscovery.getServiceNodesByService(dependencyServiceName);
+
+                            this.logger.log(String.format("Sent Topology update to node %s: %s", registriedNode.toString(), nodesToSend.toString()));
 
                             // send notification
                             try {
-                                TSocket dependencyNotificationSocket = new TSocket(registriedNode.getID());
+                                TSocket dependencyNotificationSocket = new TSocket(registriedNode.getPort());
                                 dependencyNotificationSocket.send(new EMessage(EMessageType.TopologyChange, new TopologyChangePayload(dependencyServiceName, nodesToSend)));
                                 dependencyNotificationSocket.close();
                             } catch(IOException e) {
@@ -118,7 +119,7 @@ public class EMonitor extends Thread implements IMonitor {
 
                     this.logger.log(String.format("Request to Update: %s", nodeToUpdate));
 
-                    // try to update
+                    // try to update the node information
                     EServiceNode updatedNode = this.serviceDiscovery.update(nodeToUpdate);
 
                     boolean accepted = updatedNode != null;
@@ -200,7 +201,7 @@ public class EMonitor extends Thread implements IMonitor {
                     TSocket auxSocket = new TSocket(finalNodeToNotify.getPort());
                     auxSocket.send(message);
                     auxSocket.close();
-                    logger.log(String.format("Sent Topology change to node %s", finalNodeToNotify.toString()));
+                    logger.log(String.format("Sent Topology change to node %s: %s", finalNodeToNotify.toString(), updatedNodes.toString()));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -223,5 +224,5 @@ public class EMonitor extends Thread implements IMonitor {
             }
         }
     }
-    
+
 }
