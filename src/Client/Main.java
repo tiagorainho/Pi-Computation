@@ -20,14 +20,15 @@ public class Main {
             ServerSocket serverSocket = new ServerSocket(serverPort);
             new Thread(() -> { run(serverSocket); }).start();
 
-            Thread.sleep(2000);
-
-            System.out.println("Enviado computation payload");
-            TSocket s = new TSocket(200);
-            EComputationPayload p = new EComputationPayload(serverPort, 0, 1, 1000, 2, 1);
-            EMessage m = new EMessage(EMessageType.ComputationRequest, p);
-            s.send(m);
-            s.close();
+            for(int i=0;i<20;i++) {
+                Thread.sleep(200);
+                System.out.println("Enviado computation payload");
+                TSocket s = new TSocket(200);
+                EComputationPayload p = new EComputationPayload(serverPort, 1, 1, 1000+i, 2, 1);
+                EMessage m = new EMessage(EMessageType.ComputationRequest, p);
+                s.send(m);
+                s.close();
+            }
         } catch (IOException | InterruptedException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -44,8 +45,10 @@ public class Main {
                 
                 EMessage message = temporarySocket.receive();
 
+                EMessageType messageType = message.getMessageType();
+
                 EComputationPayload payload = (EComputationPayload) message.getMessage();
-                System.out.println("Recebido  resposta: " + payload.toString());
+                System.out.println(String.format("%s: %s", messageType.toString(), payload.toString()));
 
             }
             catch(Exception e) {

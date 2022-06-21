@@ -45,7 +45,6 @@ public class EComputationServer {
         } finally {
             this.lock.unlock();
         }
-
         return request.getPI();
     }
 

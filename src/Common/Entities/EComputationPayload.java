@@ -13,6 +13,11 @@ public class EComputationPayload implements IDeepCopyable, Serializable {
     private Integer code;
     private final Integer clientPort;
 
+    @Override
+    public String toString() {
+        return String.format("[request ID: %d, Code: %d]", this.requestID, this.code);
+    }
+
     // bellow variables will be zero on the request
     private Integer serverID;
     private Double pi;
@@ -41,5 +46,8 @@ public class EComputationPayload implements IDeepCopyable, Serializable {
     public Integer getLoadbalancerPort() { return this.loadBalancerPort; }
     public Integer getServerID() { return this.serverID; }
     public Double getPI() { return this.pi; }
+
+
+    
 
 }

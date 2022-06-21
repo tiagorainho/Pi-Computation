@@ -120,6 +120,8 @@ public class EServerManager extends Thread {
                         
                         this.logger.log(String.format("Sending error response to Load Balancer on port %d: %s", loadBalancerPort, response.toString()), EColor.RED);
 
+                        request.setCode(3);
+
                         // notify the load balancer
                         TSocket lbErrorSocket = new TSocket(loadBalancerPort);
                         lbErrorSocket.send(response);
@@ -128,6 +130,7 @@ public class EServerManager extends Thread {
                     }
 
                     request.setPI(pi);
+                    request.setCode(2);
 
                     response = new EMessage(EMessageType.ComputationResult, request);
 

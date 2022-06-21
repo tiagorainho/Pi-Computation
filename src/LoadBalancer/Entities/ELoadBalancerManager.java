@@ -200,6 +200,7 @@ public class ELoadBalancerManager extends Thread {
         }
     }
 
+    // master load balancer
     @Override
     public void run() {
         // perform load balancing
@@ -290,6 +291,8 @@ public class ELoadBalancerManager extends Thread {
                         else {
                             this.logger.log(String.format("Computation Server: return error response: %s", rejectedPayload.toString()), EColor.RED);
 
+                            rejectedPayload.setServerID(null);
+
                             // proxy the request to the client
                             TSocket errorSocket = new TSocket(rejectedPayload.getClientPort());
                             errorSocket.send(new EMessage(EMessageType.ComputationRejection, rejectedPayload));
@@ -309,7 +312,9 @@ public class ELoadBalancerManager extends Thread {
                     if(!this.loadBalancer.hasNext()) {
                         this.logger.log(String.format("No computation servers available"), EColor.RED);
 
-                        TSocket errorSocket = new TSocket(computationPayload.getClientID());
+                        computationPayload.setCode(3);
+
+                        TSocket errorSocket = new TSocket(computationPayload.getClientPort());
                         errorSocket.send(new EMessage(EMessageType.ComputationRejection, computationPayload));
                         errorSocket.close();
                         break;
@@ -336,12 +341,12 @@ public class ELoadBalancerManager extends Thread {
                 case ComputationRejection -> {
                     EComputationPayload computationPayload = (EComputationPayload) message.getMessage();
 
-                    this.logger.log(String.format("Computation Rejection on request ID: %d",computationPayload.getRequestID()), EColor.RED);
+                    this.logger.log(String.format("Computation Rejection on request: %s",computationPayload), EColor.RED);
 
                     computationPayload.setServerID(null);
                     
                     // proxy error back to the user that the server cannot handle more computations
-                    TSocket errorSocket = new TSocket(computationPayload.getClientID());
+                    TSocket errorSocket = new TSocket(computationPayload.getClientPort());
                     errorSocket.send(new EMessage(EMessageType.ComputationRejection, computationPayload));
                     errorSocket.close();
 
