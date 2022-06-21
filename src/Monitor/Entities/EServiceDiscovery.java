@@ -73,6 +73,7 @@ public class EServiceDiscovery implements IServiceDiscovery {
     
     @Override
     public EServiceNode registry(String serviceName, int port) {
+        int desiredPort = port;
 
         // get the list of nodes with the respective service name
         List<EServiceNode> serviceNodes = this.servicesNodes.getOrDefault(serviceName, new ArrayList<>());
@@ -96,7 +97,7 @@ public class EServiceDiscovery implements IServiceDiscovery {
         }
 
         // create a new service node
-        EServiceNode newServiceNode = new EServiceNode(this.nodeCounter++, serviceName, port);
+        EServiceNode newServiceNode = new EServiceNode(this.nodeCounter++, serviceName, desiredPort, port);
 
         // add new service node to the list of nodes from the same service
         serviceNodes.add(newServiceNode);

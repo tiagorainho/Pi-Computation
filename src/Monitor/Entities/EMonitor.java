@@ -104,7 +104,7 @@ public class EMonitor extends Thread implements IMonitor {
                         new Thread(() -> {
                             List<EServiceNode> nodesToSend = this.serviceDiscovery.getServiceNodesByService(dependencyServiceName);
 
-                            this.logger.log(String.format("Sent Topology update to node %s: %s", registriedNode.toString(), nodesToSend.toString()));
+                            this.logger.log(String.format("Sent %s Topology update to node %s: %s", dependencyServiceName, registriedNode.toString(), nodesToSend.toString()));
 
                             // send notification
                             try {

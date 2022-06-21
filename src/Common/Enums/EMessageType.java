@@ -2,12 +2,15 @@ package Common.Enums;
 
 public enum EMessageType {
 
-    // server
+    // Load Balancer
+    SyncronizePendingRequests,
+
+    // Computation Server
     ComputationRequest,
     ComputationResult,
     ComputationRejection,
 
-    // service registry
+    // Service Registry
     RegisterServiceRegistry,
     ResponseServiceRegistry,
     RequestUpdateServiceRegistry,

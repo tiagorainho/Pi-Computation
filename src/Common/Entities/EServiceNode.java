@@ -1,22 +1,38 @@
 package Common.Entities;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
 import Common.Interfaces.IDeepCopyable;
 import Common.Interfaces.IServiceNode;
 
 public class EServiceNode implements IServiceNode, Serializable, IDeepCopyable {
 
-    private final int id;
+    private final Integer id;
     private final String serviceName;
-    private int port;
+    private Integer port;
+    private final Integer desiredPort;
     private boolean active;
+    private Map<String, Object> params;
 
-    public EServiceNode(int id, String serviceName, int port) {
+    public EServiceNode(int id, String serviceName, int desiredPort, int port) {
         this.id = id;
         this.serviceName = serviceName;
         this.port = port;
+        this.desiredPort = desiredPort;
         this.active = true;
+        this.params = new HashMap<>();
+    }
+
+    public Integer getDesiredPort() { return this.desiredPort; }
+
+    public void set(String name, Object obj) {
+        this.params.put(name, obj);
+    }
+
+    public Object get(String name) {
+        return this.params.get(name);
     }
 
     public void updatePort(int port) {

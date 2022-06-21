@@ -32,7 +32,7 @@ public class ELoadBalancerManager extends Thread {
     private final String ComputationServiceName = "Computation";
     private final List<String> dependenciesList = List.of(LBserviceName, ComputationServiceName);
     private final Map<String, List<EServiceNode>> dependentNodesByService;
-    private final Map<Integer, EComputationPayload> pendingComputations;
+    private Map<Integer, EComputationPayload> pendingComputations;
 
     private final SingletonLogger logger = SingletonLogger.getInstance();
 
@@ -70,12 +70,13 @@ public class ELoadBalancerManager extends Thread {
             socket.close();
             
             // consume the response
-            switch(response.getMessageType()) {
-                case ResponseServiceRegistry:
-                    this.node  = (EServiceNode) response.getMessage();
-                    this.logger.log(String.format("Registry received: %s", this.node));
-                    this.serverSocket = new ServerSocket(this.node.getPort());
-                    break;
+            if(response.getMessageType() == EMessageType.ResponseServiceRegistry) {
+                this.node  = (EServiceNode) response.getMessage();
+                this.logger.log(String.format("Registry received: %s", this.node));
+                this.serverSocket = new ServerSocket(this.node.getPort());
+            }
+            else {
+                throw new Exception("Error in the registry response");
             }
 
             // wait until it becomes the main load balancer
@@ -100,13 +101,13 @@ public class ELoadBalancerManager extends Thread {
                 message = temporarySocket.receive();
 
                 switch(message.getMessageType()) {
-                    case Heartbeat:
+                    case Heartbeat -> {
                         this.logger.log(String.format("HeartBeat Waiting: %s", this.node.toString()), EColor.GREEN);
 
                         temporarySocket.send(new EMessage(EMessageType.Heartbeat, null));
-                    break;
+                    }
 
-                    case TopologyChange:
+                    case TopologyChange -> {
                         TopologyChangePayload payload = (TopologyChangePayload) message.getMessage();
 
                         List<EServiceNode> registeredNodes = payload.getNodes();
@@ -184,7 +185,12 @@ public class ELoadBalancerManager extends Thread {
                             this.serverSocket = new ServerSocket(this.node.getPort());
                             this.logger.log(String.format("Master Load Balancer started on port %d", this.node.getPort()));
                         }
-                    break;
+                    }
+
+                    case SyncronizePendingRequests -> {
+                        this.pendingComputations = (Map<Integer, EComputationPayload>) message.getMessage();
+                        this.logger.log(String.format("Syncronized pending requests, n: %d", this.pendingComputations.size()));
+                    }
                 }
                 temporarySocket.close();
             }
@@ -309,7 +315,7 @@ public class ELoadBalancerManager extends Thread {
                         break;
                     }
 
-                    // get the next load balancer to be used
+                    // get the next computation server to be used
                     EServiceNode nodeToRequest = this.loadBalancer.next(computationPayload.getIteractions());
                     computationPayload.setServerID(nodeToRequest.getID());
 
@@ -323,6 +329,8 @@ public class ELoadBalancerManager extends Thread {
                     newRequestSocket.send(new EMessage(EMessageType.ComputationRequest, computationPayload));
                     newRequestSocket.close();
 
+                    // syncronize the other load balancers
+                    this.syncronizePendingRequests();
                 }
 
                 case ComputationRejection -> {
@@ -339,6 +347,9 @@ public class ELoadBalancerManager extends Thread {
 
                     // remove from the pending requests
                     this.pendingComputations.remove(computationPayload.getRequestID());
+
+                    // syncronize the other load balancers
+                    this.syncronizePendingRequests();
                 }
 
                 case ComputationResult -> {
@@ -347,12 +358,40 @@ public class ELoadBalancerManager extends Thread {
                     this.logger.log(String.format("Computation Result on request ID %d -> %s", computationResultPayload.getRequestID(), computationResultPayload.getPI().toString()), EColor.GREEN);
 
                     this.pendingComputations.remove(computationResultPayload.getRequestID());
+
+                    // syncronize the other load balancers
+                    this.syncronizePendingRequests();
                 }
             }
         }
         catch(IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
+    }
+
+    public void syncronizePendingRequests() {
+
+        // send the pending computations to all the waiting load balancers
+        for(EServiceNode loadBalancerNode: this.dependentNodesByService.get(this.LBserviceName)) {
+
+            // ignore itself
+            if(loadBalancerNode.equals(this.node)) continue;
+
+            // ignore nodes of a different master
+            if(!loadBalancerNode.getDesiredPort().equals(this.node.getPort())) continue;
+
+            new Thread(() -> {
+                TSocket socket;
+                try {
+                    socket = new TSocket(loadBalancerNode.getPort());
+                    socket.send(new EMessage(EMessageType.SyncronizePendingRequests, this.pendingComputations));
+                    socket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+        }
+        
     }
 
 
