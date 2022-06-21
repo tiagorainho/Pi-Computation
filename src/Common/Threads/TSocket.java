@@ -29,6 +29,10 @@ public class TSocket extends Thread implements ISocket<EMessage> {
         this.runnable = runnable;
     }
 
+    public Integer getPort() {
+        return this.socket.getPort();
+    }
+
     public Socket getSocket() {
         return this.socket;
     }

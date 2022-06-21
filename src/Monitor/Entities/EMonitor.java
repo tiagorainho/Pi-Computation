@@ -85,6 +85,12 @@ public class EMonitor extends Thread implements IMonitor {
                             e.printStackTrace();
                         }
                     }).start();
+                    
+                    // topology change
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {}
+                    this.topologyChange(registriedNode.getServiceName());
                 }
 
                 case RequestUpdateServiceRegistry -> {
@@ -123,7 +129,7 @@ public class EMonitor extends Thread implements IMonitor {
             try {
                 Thread.sleep(this.heartBeatPeriod);
 
-                this.logger.log(String.format("Heartbeat -> %d", node.getPort()));
+                this.logger.log(String.format("Heartbeat -> %s", node.toString()));
                 heartBeatSocket = new TSocket(node.getPort());
                 
                 //// heartBeatSocket.getSocket().setSoTimeout(1000);
@@ -145,7 +151,8 @@ public class EMonitor extends Thread implements IMonitor {
             }
         }
         node.deactivate();
-        this.logger.log(String.format("Service %s deactivated", node.toString()));
+        this.logger.log(String.format("Node %s deactivated", node.toString()));
+        heartBeatSocket.close();
         this.topologyChange(node.getServiceName());
     }
 
@@ -157,8 +164,6 @@ public class EMonitor extends Thread implements IMonitor {
         // updated service nodes
         List<EServiceNode> updatedNodes = this.serviceDiscovery.getServiceNodesByService(serviceName);
 
-        //List<EServiceNode> updatedNodes = new ArrayList<>(serviceNodes.size());
-
         // create msg to send
         EMessage message = new EMessage(EMessageType.TopologyChange, new TopologyChangePayload(serviceName, updatedNodes));
 
@@ -168,15 +173,18 @@ public class EMonitor extends Thread implements IMonitor {
         // send message with all the current nodes
         for(EServiceNode nodeToNotify: nodesToNotify) {
             if(!nodeToNotify.isActive()) continue;
-            try {
-                TSocket auxSocket = new TSocket(new Socket("localhost", nodeToNotify.getPort()));
-                auxSocket.send(message);
-                this.logger.log(String.format("Sent Topology change to node %s", nodeToNotify.toString()));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            final EServiceNode finalNodeToNotify = nodeToNotify;
+            new Thread(() -> {
+                try {
+                    TSocket auxSocket = new TSocket(finalNodeToNotify.getPort());
+                    auxSocket.send(message);
+                    auxSocket.close();
+                    logger.log(String.format("Sent Topology change to node %s", finalNodeToNotify.toString()));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }).start();
         }
-        
     }
 
     @Override

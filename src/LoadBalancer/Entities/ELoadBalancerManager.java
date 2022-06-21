@@ -3,11 +3,17 @@ package LoadBalancer.Entities;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import Common.Entities.EComputationPayload;
 import Common.Entities.EMessage;
 import Common.Entities.EMessageRegistry;
 import Common.Entities.EServiceNode;
@@ -25,13 +31,16 @@ public class ELoadBalancerManager extends Thread {
     private ServerSocket serverSocket;
     private int masterLoadBalancerPort;
     private final String LBserviceName = "LoadBalancer";
-    private final String ComputationServiceName = "computation";
-    private final List<String> dependencies = List.of(LBserviceName, ComputationServiceName);
-    public final Map<String, List<EServiceNode>> dependenciesState;
+    private final String ComputationServiceName = "Computation";
+    private final List<String> dependenciesList = List.of(LBserviceName, ComputationServiceName);
+    private final Map<String, List<EServiceNode>> dependentNodesByService;
+    private final Map<Integer, EComputationPayload> pendingComputations;
+
     private final SingletonLogger logger = SingletonLogger.getInstance();
 
     public ELoadBalancerManager() {
-        this.dependenciesState = new HashMap<>();
+        this.dependentNodesByService = new HashMap<>();
+        this.pendingComputations = new HashMap<>();
     }
 
     public void startLoadBalancer(int serviceRegistryPort, int weightPerNode, int masterLoadBalancerPort) throws Exception {
@@ -54,7 +63,7 @@ public class ELoadBalancerManager extends Thread {
         try {
             // registry load balancer
             socket.send(
-                new EMessageRegistry(LBserviceName, masterLoadBalancerPort, dependencies)
+                new EMessageRegistry(LBserviceName, masterLoadBalancerPort, dependenciesList)
             );
             this.logger.log(String.format("Registry request: %s:%d -> Monitor:%d", LBserviceName, masterLoadBalancerPort, serviceRegistryPort));
 
@@ -94,7 +103,8 @@ public class ELoadBalancerManager extends Thread {
 
                 switch(message.getMessageType()) {
                     case Heartbeat:
-                        this.logger.log(String.format("HeartBeat: Waiting"), EColor.GREEN);
+                        this.logger.log(String.format("HeartBeat Waiting: %s", this.node.toString()), EColor.GREEN);
+
                         temporarySocket.send(new EMessage(EMessageType.Heartbeat, null));
                     break;
 
@@ -104,24 +114,22 @@ public class ELoadBalancerManager extends Thread {
                         List<EServiceNode> registeredNodes = payload.getNodes();
                         String updatedService = payload.getServiceName();
 
+                        this.logger.log(String.format("Topology Change on %s: %s", payload.getServiceName(), payload.getNodes().toString()), EColor.RED);
+
                         // update the depencies state
-                        this.dependenciesState.put(updatedService, registeredNodes);
+                        this.dependentNodesByService.put(updatedService, registeredNodes);
 
                         // break if the updated service is not a load balancer
-                        if(!updatedService.equals(LBserviceName)) break;
-
-                        this.logger.log(String.format("%s will update its master", LBserviceName), EColor.RED);
+                        if(updatedService.equals(ComputationServiceName)) {
+                            loadBalancer.updateNodes(registeredNodes);
+                            break;
+                        }
 
                         // remove inactive nodes
                         for (Iterator<EServiceNode> iterator = registeredNodes.iterator(); iterator.hasNext(); ) {
                             if(!iterator.next().isActive()) {
                                 iterator.remove();
                             }
-                        }
-
-                        System.out.println("registeredNodes:");
-                        for(EServiceNode n: registeredNodes) {
-                            System.out.println(n.toString());
                         }
 
                         // get the minimum id of the list of load balancers
@@ -218,11 +226,127 @@ public class ELoadBalancerManager extends Thread {
 
             switch(message.getMessageType()) {
 
-                case Heartbeat:
-                    this.logger.log("HeartBeat: Working", EColor.GREEN);
-                    socket.send(new EMessage(EMessageType.Heartbeat, null));
-                break;
+                case Heartbeat -> {
+                    this.logger.log(String.format("HeartBeat Working: %s", this.node.toString()), EColor.GREEN);
 
+                    socket.send(new EMessage(EMessageType.Heartbeat, null));
+                }
+
+                case TopologyChange -> {
+                    TopologyChangePayload typologyPayload = (TopologyChangePayload) message.getMessage();
+
+                    List<EServiceNode> registeredNodes = typologyPayload.getNodes();
+                    String updatedService = typologyPayload.getServiceName();       
+                    
+                    this.logger.log(String.format("Topology Change on %s: %s", typologyPayload.getServiceName(), typologyPayload.getNodes().toString()));
+
+                    // update the depencies state
+                    this.dependentNodesByService.put(updatedService, registeredNodes);
+
+                    // only continue if it is a topology change from a computational node
+                    if(!updatedService.equals(ComputationServiceName)) break;
+
+                    // update the load balancer state
+                    this.loadBalancer.updateNodes(registeredNodes);
+
+                    List<EServiceNode> activeComputationNodes = this.dependentNodesByService.get(this.ComputationServiceName);
+
+                    // get active nodes IDs
+                    Set<Integer> activeComputationNodesIDs = new HashSet<>();
+                    for(EServiceNode node: activeComputationNodes)
+                        if(node.isActive())
+                            activeComputationNodesIDs.add(node.getID());
+                    
+
+                    List<EComputationPayload> rejectedPayloads = new LinkedList<>();
+                    for(EComputationPayload payload: this.pendingComputations.values()) {
+                        if(activeComputationNodesIDs.contains(payload.getServerID())) continue;
+
+                        // in case it needs another proxy
+                        rejectedPayloads.add(payload);
+                    }
+
+                    if(rejectedPayloads.size() > 0)
+                        this.logger.log(String.format("Computation Server: %d error%s", rejectedPayloads.size(), (rejectedPayloads.size()>1)?"s":""), EColor.RED);
+
+                    for(EComputationPayload rejectedPayload: rejectedPayloads) {
+                        
+                        // if there is still active servers
+                        if(this.loadBalancer.hasNext()) {
+                            EServiceNode nodeToRequest = this.loadBalancer.next(rejectedPayload.getIteractions());
+
+                            this.logger.log(String.format("Computation Server: resend %s to %s", rejectedPayload.toString(), nodeToRequest.toString()), EColor.GREEN);
+    
+                            // proxy the request to a server
+                            TSocket newRequestSocket = new TSocket(nodeToRequest.getPort());
+                            newRequestSocket.send(new EMessage(EMessageType.ComputationRequest, rejectedPayload));
+                            newRequestSocket.close();
+                        }
+                        else {
+                            this.logger.log(String.format("Computation Server: return error response: %s", rejectedPayload.toString()), EColor.RED);
+
+                            // proxy the request to the client
+                            TSocket errorSocket = new TSocket(rejectedPayload.getClientPort());
+                            errorSocket.send(new EMessage(EMessageType.ComputationRejection, rejectedPayload));
+                            errorSocket.close();
+                        }
+                    }
+                }
+
+                case ComputationRequest -> {
+                    EComputationPayload computationPayload = (EComputationPayload) message.getMessage();
+                
+                    this.logger.log(String.format("Computation request on %s: %s", this.node.toString(), computationPayload.toString()), EColor.GREEN);
+
+                    // check if there is an available load balancer
+                    if(!this.loadBalancer.hasNext()) {
+                        this.logger.log(String.format("No computation servers available"), EColor.RED);
+
+                        TSocket errorSocket = new TSocket(computationPayload.getClientID());
+                        errorSocket.send(new EMessage(EMessageType.ComputationRejection, computationPayload));
+                        errorSocket.close();
+                        break;
+                    }
+
+                    // get the next load balancer to be used
+                    EServiceNode nodeToRequest = this.loadBalancer.next(computationPayload.getIteractions());
+                    computationPayload.setServerID(nodeToRequest.getID());
+
+                    this.logger.log(String.format("Computation request %s will be proxied to %s", computationPayload.toString(), nodeToRequest.toString()), EColor.GREEN);
+
+                    // save the pending computation
+                    this.pendingComputations.put(computationPayload.getRequestID(), computationPayload);
+
+                    // proxy the request to a server
+                    TSocket newRequestSocket = new TSocket(nodeToRequest.getPort());
+                    newRequestSocket.send(new EMessage(EMessageType.ComputationRequest, computationPayload));
+                    newRequestSocket.close();
+
+                }
+
+                case ComputationRejection -> {
+                    EComputationPayload computationPayload = (EComputationPayload) message.getMessage();
+
+                    this.logger.log(String.format("Computation Rejection on request ID: %d",computationPayload.getRequestID()), EColor.RED);
+
+                    computationPayload.setServerID(null);
+                    
+                    // proxy error back to the user that the server cannot handle more computations
+                    TSocket errorSocket = new TSocket(computationPayload.getClientID());
+                    errorSocket.send(new EMessage(EMessageType.ComputationRejection, computationPayload));
+                    errorSocket.close();
+
+                    // remove from the pending requests
+                    this.pendingComputations.remove(computationPayload.getRequestID());
+                }
+
+                case ComputationResult -> {
+                    EComputationPayload computationResultPayload = (EComputationPayload) message.getMessage();
+
+                    this.logger.log(String.format("Computation Result on request ID %d -> %d", computationResultPayload.getRequestID(), computationResultPayload.getPI()), EColor.GREEN);
+
+                    this.pendingComputations.remove(computationResultPayload.getRequestID());
+                }
             }
         }
         catch(IOException | ClassNotFoundException e) {

@@ -22,4 +22,9 @@ public class EMessage implements Serializable {
         return this.message;
     }
     
+    @Override
+    public String toString() {
+        return String.format("[Message %s: %s]", this.messageType.toString(), (this.message == null)? "null": this.message.toString());
+    }
+    
 }

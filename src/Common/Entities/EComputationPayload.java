@@ -11,12 +11,14 @@ public class EComputationPayload implements IDeepCopyable, Serializable {
     private final Integer iteractions;
     private final Integer deadline;
     private Integer code;
+    private final Integer clientPort;
 
     // bellow variables will be zero on the request
     private Integer serverID;
     private Double pi;
    
-    public EComputationPayload(Integer code, Integer clientID, Integer requestID, Integer iteractions, Integer deadline) {
+    public EComputationPayload(Integer clientPort, Integer code, Integer clientID, Integer requestID, Integer iteractions, Integer deadline) {
+        this.clientPort = clientPort;
         this.code = code;
         this.clientID = clientID;
         this.iteractions = iteractions;
@@ -28,6 +30,7 @@ public class EComputationPayload implements IDeepCopyable, Serializable {
     public void setServerID(Integer id) { this.serverID = id; }
     public void setCode(Integer code) { this.code = code; }
     
+    public Integer getClientPort() { return this.clientPort; }
     public Integer getClientID() { return this.clientID; }
     public Integer getRequestID() { return this.requestID; }
     public Integer getIteractions() { return this.iteractions; }

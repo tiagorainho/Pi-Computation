@@ -4,41 +4,35 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import Common.Entities.EServiceNode;
-import Common.Interfaces.IProducer;
 import Common.Interfaces.IServiceIterator;
 
-public class ELoadBalancer implements IServiceIterator<EServiceNode>, IProducer<EServiceNode> {
+public class ELoadBalancer implements IServiceIterator<EServiceNode> {
 
-    private final List<EServiceNode> nodes;
-    private final Map<EServiceNode, Integer> nodesWeight;
+    private List<EServiceNode> nodes;
+    private final Map<Integer, Integer> nodesWeight;
     private final int maxWeightPerNode;
     private int nodeIdx;
     
     public ELoadBalancer(int weightPerNode) {
-        this.maxWeightPerNode = weightPerNode;
         this.nodes = new ArrayList<>();
+        this.maxWeightPerNode = weightPerNode;
         this.nodesWeight = new HashMap<>();
         this.nodeIdx = 0;
     }
 
-    public Set<EServiceNode> getNodes() {
-        return this.nodesWeight.keySet();
+    public List<EServiceNode> getNodes() {
+        return this.nodes;
     }
 
-    @Override
-    public void put(EServiceNode newNode) {
-        if(this.nodesWeight.containsKey(newNode)) {
-            this.nodes.add(newNode);
-            this.nodesWeight.put(newNode, 0);
-        }
+    public void updateNodes(List<EServiceNode> nodes) {
+        this.nodes = nodes;
     }
 
     @Override
     public boolean hasNext() {
-        for(EServiceNode node: this.getNodes())
+        for(EServiceNode node: this.nodes)
             if(node.isActive())
                 return true;
         return false;
@@ -46,15 +40,16 @@ public class ELoadBalancer implements IServiceIterator<EServiceNode>, IProducer<
 
     @Override
     public EServiceNode next(int weight) {
+
         EServiceNode node = this.nodes.get(this.nodeIdx);
 
         // use the current node if remains active
         if(node.isActive()) {
-            int nodeWeight = this.nodesWeight.get(node);
+            int nodeWeight = this.nodesWeight.get(node.getID());
 
             // check the current node load
             if(nodeWeight < this.maxWeightPerNode) {
-                this.nodesWeight.put(node, nodeWeight + weight);
+                this.nodesWeight.put(node.getID(), nodeWeight + weight);
                 return node;
             }
         }
@@ -66,10 +61,10 @@ public class ELoadBalancer implements IServiceIterator<EServiceNode>, IProducer<
             int idx = i % this.nodes.size();
 
             // find the first which is active
-            if(this.nodes.get(idx).isActive()) {
+            if(nodes.get(idx).isActive()) {
                 this.nodeIdx = idx;
                 node = this.nodes.get(idx);
-                this.nodesWeight.put(node, 0);
+                this.nodesWeight.put(node.getID(), 0);
                 break;
             }
         }

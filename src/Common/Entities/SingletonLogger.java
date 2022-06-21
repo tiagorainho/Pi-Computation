@@ -23,7 +23,7 @@ public class SingletonLogger {
     }
 
     public void log(String message, EColor color) {
-        System.out.println(String.format("%s%s%s", (color==null) ? "" : colors.getOrDefault(color, ""), message, resetCode));
+        System.out.println(String.format("%d - %s%s%s", System.currentTimeMillis(), (color==null) ? "" : colors.getOrDefault(color, ""), message, resetCode));
     }
 
     public void log(String message) {

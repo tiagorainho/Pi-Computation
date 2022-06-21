@@ -47,10 +47,17 @@ public class EServiceNode implements IServiceNode, Serializable, IDeepCopyable {
         this.active = true;
     }
 
+    /*
     @Override
     public String toString() {
         String color = this.isActive() ? "\u001B[32m" : "\u001B[31m";
-        return String.format("%s[%s-%d]:%d \u001B[0m", color, this.serviceName, this.id, this.port);
+        return String.format("%s[%s-%d]:%d\u001B[0m", color, this.serviceName, this.id, this.port);
+    }
+    */
+
+    @Override
+    public String toString() {
+        return String.format("[%s-%d:%d]", this.serviceName, this.id, this.port);
     }
 
     @Override

@@ -5,6 +5,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.List;
 
+import Common.Entities.EComputationPayload;
 import Common.Entities.EMessage;
 import Common.Entities.EMessageRegistry;
 import Common.Entities.EServiceNode;
@@ -15,21 +16,19 @@ import Common.Threads.TSocket;
 
 public class EServerManager extends Thread {
 
-    private final String address = "localhost";
-    private final String ComputationServiceName = "computation";
-    private EServer server;
+    private final String ComputationServiceName = "Computation";
     private final SingletonLogger logger = SingletonLogger.getInstance();
     private EServiceNode node;
+    private final EComputationServer server;
     private ServerSocket serverSocket;
 
     public EServerManager() {
-
+        this.server = new EComputationServer();
     }
 
     public void startServer(int serviceRegistryPort, int port) throws Exception {
 
         // try to connect to service registry
-        this.server = new EServer();
         TSocket socket = null;
         try {
             socket = new TSocket(serviceRegistryPort);
@@ -70,7 +69,8 @@ public class EServerManager extends Thread {
 
     @Override
     public void run() {
-        // perform load balancing
+
+        // handle the computations
         while (true) {
             try {
                 Socket clientSocket = this.serverSocket.accept();
@@ -95,15 +95,41 @@ public class EServerManager extends Thread {
     public void serveRequest(TSocket socket) {
         try {
             EMessage message = socket.receive();
+            EMessage response;
 
             switch(message.getMessageType()) {
 
                 case Heartbeat:
-                    this.logger.log("HeartBeat", EColor.GREEN);
+                    this.logger.log(String.format("HeartBeat: %s", this.node.toString()), EColor.GREEN);
                     socket.send(new EMessage(EMessageType.Heartbeat, null));
                 break;
 
+                case ComputationRequest:
+                    this.logger.log(String.format("HeartBeat: %s", this.node.toString()), EColor.GREEN);
 
+                    EComputationPayload request = (EComputationPayload) message.getMessage();
+                    request.setServerID(this.node.getID());
+
+                    Double pi = this.server.computePI(request.getIteractions(), request.getDeadline());
+
+                    // create response message based on the success of the compute PI operation
+                    if(pi == null) {
+                        response = new EMessage(EMessageType.ComputationRejection, null);
+                        
+                        // notify the loadbalancer
+                        this.logger.log(String.format("Sending error response to port %d: %s", socket.getPort(), response.toString()));
+                        socket.send(response);
+                    }
+
+                    request.setPI(pi);
+                    response = new EMessage(EMessageType.ComputationResult, request);
+
+                    // respond to the final client
+                    this.logger.log(String.format("Sending Computation Response for client on port %d: %s", request.getClientPort(), response));
+                    TSocket finalClientSocket = new TSocket(request.getClientPort());
+                    finalClientSocket.send(response);
+                    finalClientSocket.close();
+                break;
             }
         }
         catch(IOException | ClassNotFoundException e) {
