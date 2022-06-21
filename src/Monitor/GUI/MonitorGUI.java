@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import Common.Entities.EComputationPayload;
 import Common.Entities.EMessage;
 import Common.Entities.EServiceNode;
 import Common.Enums.EStatus;
@@ -62,18 +63,28 @@ public class MonitorGUI extends javax.swing.JFrame {
         }
     }
 
-    public void addRequest(EServiceNode node, EMessage message){
+    public void addRequest(EServiceNode node, EComputationPayload payload){
+        Object data[] = {payload.getRequestID(),payload.getClientID(),0,0,payload.getDeadline()};
         switch(node.getServiceName()){
             case "LoadBalancer":
-                lbPanels.get(node.getID()).addRequest(message);
+                lbPanels.get(node.getID()).addRequest(data);
                 break;
         }
     }
 
-    public void highlightRow(EServiceNode node, EMessage message){
+    public void updateRequest(EServiceNode node, EComputationPayload payload){
+        Object data[] = {payload.getRequestID(),payload.getClientID(),0,0,payload.getDeadline()};
         switch(node.getServiceName()){
             case "LoadBalancer":
-                lbPanels.get(node.getID()).highlightRow(message);
+                lbPanels.get(node.getID()).addRequest(data);
+                break;
+        }
+    }
+
+    public void deleteRequest(EServiceNode node, EComputationPayload payload){
+        switch(node.getServiceName()){
+            case "LoadBalancer":
+                lbPanels.get(node.getID()).deleteRequest(payload.getRequestID());
                 break;
         }
     }
