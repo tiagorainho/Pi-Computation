@@ -46,8 +46,16 @@ public class PanelMonitor extends JPanel {
         table.setFillsViewportHeight(true);
     }
 
-    public void addRequest(EMessage message){
-        table.addRow(message);
+    public void addRequest(Object[] data){
+        table.addRow(data);
+    }
+
+    public void updateRequest(Object[] data){
+        table.updateRow(data);
+    }
+
+    public void deleteRequest(Object idx){
+        table.deleteRow(idx);
     }
 
     public void highlightRow(EMessage message){
