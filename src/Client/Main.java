@@ -21,13 +21,19 @@ public class Main {
             new Thread(() -> { run(serverSocket); }).start();
 
             for(int i=0;i<20;i++) {
-                Thread.sleep(200);
+                Thread.sleep(1000);
                 System.out.println("Enviado computation payload");
-                TSocket s = new TSocket(200);
-                EComputationPayload p = new EComputationPayload(serverPort, 1, 1, 1000+i, 2, 1);
-                EMessage m = new EMessage(EMessageType.ComputationRequest, p);
-                s.send(m);
-                s.close();
+                try {
+                    TSocket s = new TSocket(200);
+                    EComputationPayload p = new EComputationPayload(serverPort, 1, 1, 1000+i, 2, 1);
+                    EMessage m = new EMessage(EMessageType.ComputationRequest, p);
+                    s.send(m);
+                    s.close();
+                }
+                catch(Exception e) {
+
+                }
+                
             }
         } catch (IOException | InterruptedException e) {
             // TODO Auto-generated catch block

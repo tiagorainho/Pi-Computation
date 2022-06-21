@@ -135,9 +135,11 @@ public class ELoadBalancerManager extends Thread {
                         EServiceNode minNode = registeredNodes.stream().min((node1, node2) -> {
                             return node1.getID().compareTo(node2.getID());
                         }).get();
+
+                        this.logger.log(String.format("Next Load Balancer Master: %s", minNode.toString()));
                         
                         // start work on server socket if is the node with the minimum id
-                        if(minNode.getID() == this.node.getID()) {
+                        if(minNode.getID().equals(this.node.getID())) {
 
                             // get the proposed node
                             EServiceNode proposedServiceNode = this.node.deepCopy();
@@ -203,6 +205,9 @@ public class ELoadBalancerManager extends Thread {
     // master load balancer
     @Override
     public void run() {
+
+        this.logger.log(String.format("Start Pending Computations: %s", this.pendingComputations.values().toString()));
+
         // perform load balancing
         while (true) {
             try {
