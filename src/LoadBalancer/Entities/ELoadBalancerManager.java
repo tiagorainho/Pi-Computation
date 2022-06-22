@@ -67,7 +67,9 @@ public class ELoadBalancerManager extends Thread {
             socket.send(
                 new EMessageRegistry(LBserviceName, masterLoadBalancerPort, dependenciesList)
             );
+            
             this.logger.log(String.format("Registry request: %s:%d -> Monitor:%d", LBserviceName, masterLoadBalancerPort, serviceRegistryPort));
+
 
             // receive response
             response = (EMessage) socket.receive();
@@ -100,6 +102,7 @@ public class ELoadBalancerManager extends Thread {
         EMessage message=null;
 
         while(this.node.getPort() != masterLoadBalancerPort) {
+
             try {
                 Socket newConn = this.serverSocket.accept();
                 TSocket temporarySocket = new TSocket(newConn);
@@ -305,7 +308,7 @@ public class ELoadBalancerManager extends Thread {
                             // proxy the request to a server
                             TSocket newRequestSocket = new TSocket(nodeToRequest.getPort());
                             newRequestSocket.send(new EMessage(EMessageType.ComputationRequest, rejectedPayload));
-                            newRequestSocket.close();
+                            //newRequestSocket.close();
                         }
                         else {
                             this.logger.log(String.format("Computation Server: return error response: %s", rejectedPayload.toString()), EColor.RED);
@@ -343,7 +346,7 @@ public class ELoadBalancerManager extends Thread {
                     EServiceNode nodeToRequest = this.loadBalancer.next(computationPayload.getIteractions());
                     computationPayload.setServerID(nodeToRequest.getID());
 
-                    this.logger.log(String.format("Computation request %s will be proxied to %s", computationPayload.toString(), nodeToRequest.toString()), EColor.GREEN);
+                    this.logger.log(String.format("Computation request: %s will be proxied to %s", computationPayload.toString(), nodeToRequest.toString()), EColor.GREEN);
 
                     // save the pending computation
                     this.pendingComputations.put(computationPayload.getRequestID(), computationPayload);
@@ -351,7 +354,7 @@ public class ELoadBalancerManager extends Thread {
                     // proxy the request to a server
                     TSocket newRequestSocket = new TSocket(nodeToRequest.getPort());
                     newRequestSocket.send(new EMessage(EMessageType.ComputationRequest, computationPayload));
-                    newRequestSocket.close();
+                    //newRequestSocket.close();
 
                     // syncronize the other load balancers
                     this.syncronizePendingRequests();
@@ -379,7 +382,7 @@ public class ELoadBalancerManager extends Thread {
                 case ComputationResult -> {
                     EComputationPayload computationResultPayload = (EComputationPayload) message.getMessage();
 
-                    this.logger.log(String.format("Computation Result on request ID %d -> %s", computationResultPayload.getRequestID(), computationResultPayload.getPI().toString()), EColor.GREEN);
+                    this.logger.log(String.format("Computation Result on request %s", computationResultPayload.toString()), EColor.GREEN);
 
                     this.pendingComputations.remove(computationResultPayload.getRequestID());
 
@@ -398,8 +401,11 @@ public class ELoadBalancerManager extends Thread {
         // send the pending computations to all the waiting load balancers
         for(EServiceNode loadBalancerNode: this.dependentNodesByService.get(this.LBserviceName)) {
 
+            // ignore inactive nodes
+            if(!loadBalancerNode.isActive()) continue;
+
             // ignore itself
-            if(loadBalancerNode.equals(this.node)) continue;
+            if(loadBalancerNode.getID().equals(this.node.getID())) continue;
 
             // ignore nodes of a different master
             if(!loadBalancerNode.getDesiredPort().equals(this.node.getPort())) continue;

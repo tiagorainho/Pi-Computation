@@ -1,66 +1,35 @@
 package Client;
 
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.util.Random;
 
-import Common.Entities.EComputationPayload;
-import Common.Entities.EMessage;
-import Common.Enums.EMessageType;
-import Common.Threads.TSocket;
+import Client.Entities.EClient;
 
 public class Main {
 
     public static void main(String[] args) {
 
-        int serverPort = 600;
-
+        int serverPort = 800;
+        int monitorPort = 100;
+        int loadBalancerPort = 200;
+        EClient client = null;
         try {
-            Thread.sleep(1000);
-            ServerSocket serverSocket = new ServerSocket(serverPort);
-            new Thread(() -> { run(serverSocket); }).start();
-
-            for(int i=0;i<20;i++) {
-                Thread.sleep(1000);
-                System.out.println("Enviado computation payload");
-                try {
-                    TSocket s = new TSocket(200);
-                    EComputationPayload p = new EComputationPayload(serverPort, 1, 1, 1000+i, 2, 1);
-                    EMessage m = new EMessage(EMessageType.ComputationRequest, p);
-                    s.send(m);
-                    s.close();
-                }
-                catch(Exception e) {
-
-                }
-                
-            }
-        } catch (IOException | InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            client = new EClient(monitorPort, serverPort);
+        } catch (Exception e1) {
+            e1.printStackTrace();
         }
-        
-    }
 
-    public static void run(ServerSocket serverSocket) {
-        System.out.println("Aberto o server socket");
-        while(true) {
+        for(int i=0;i<10;i++) {
             try {
-                Socket newConn = serverSocket.accept();
-                TSocket temporarySocket = new TSocket(newConn);
-                
-                EMessage message = temporarySocket.receive();
+                Thread.sleep(1000);
 
-                EMessageType messageType = message.getMessageType();
+                Random r = new Random();
+                int interactions = 1;//r.nextInt(1, 10);
+                int deadline = r.nextInt(1, 4);
 
-                EComputationPayload payload = (EComputationPayload) message.getMessage();
-                System.out.println(String.format("%s: %s", messageType.toString(), payload.toString()));
-
-            }
-            catch(Exception e) {
-
-            }
+                client.sendRequest(loadBalancerPort, interactions, deadline);
+            } catch (InterruptedException e) {}
         }
+
     }
 
 }
