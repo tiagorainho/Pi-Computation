@@ -1,25 +1,18 @@
 package LoadBalancer.Entities;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 
+import Common.Entities.EComputationPayload;
 import Common.Entities.EServiceNode;
 import Common.Interfaces.IServiceIterator;
 
-public class ELoadBalancer implements IServiceIterator<EServiceNode> {
+public class ELoadBalancer {
 
     private List<EServiceNode> nodes;
-    private final Map<Integer, Integer> nodesWeight;
-    private final int maxWeightPerNode;
-    private int nodeIdx;
     
-    public ELoadBalancer(int weightPerNode) {
-        this.nodes = new ArrayList<>();
-        this.maxWeightPerNode = weightPerNode;
-        this.nodesWeight = new HashMap<>();
-        this.nodeIdx = 0;
+    public ELoadBalancer() {
+
     }
 
     public List<EServiceNode> getNodes() {
@@ -29,52 +22,38 @@ public class ELoadBalancer implements IServiceIterator<EServiceNode> {
     public void updateNodes(List<EServiceNode> nodes) {
         this.nodes = nodes;
         for(EServiceNode node: nodes) {
-            if(!this.nodesWeight.containsKey(node.getID())) {
-                this.nodesWeight.put(node.getID(), 0);
-            }
+            if(!this.nodes.contains(node))
+                node.set("weight", 0);
         }
     }
 
-    @Override
     public boolean hasNext() {
-        System.out.println(this.nodes);
         for(EServiceNode node: this.nodes)
             if(node.isActive())
                 return true;
         return false;
     }
 
-    @Override
-    public EServiceNode next(int weight) {
+    public EServiceNode load(EComputationPayload computationPayload) {
+        
+        // find the node with the least amount of weight
+        EServiceNode minNode = this.nodes.stream().min(Comparator.comparingInt((node) -> (int) node.get("weight"))).get();
 
-        EServiceNode node = this.nodes.get(this.nodeIdx);
+        // add weight
+        minNode.set("weight", (int) minNode.get("weight") + computationPayload.getIteractions());
 
-        // use the current node if remains active
-        if(node.isActive()) {
-            int nodeWeight = this.nodesWeight.get(node.getID());
+        return minNode;
+    }
 
-            // check the current node load
-            if(nodeWeight < this.maxWeightPerNode) {
-                this.nodesWeight.put(node.getID(), nodeWeight + weight);
-                return node;
+    public void aliviate(EComputationPayload computationPayload) {
+        Integer nodeID = computationPayload.getServerID();
+        int weight = computationPayload.getIteractions();
+        for(EServiceNode node: this.nodes) {
+            if(node.getID().equals(nodeID)) {
+                int newWeight = (int) node.get("weight") - weight;
+                node.set("weight", newWeight);
             }
         }
-
-        // loop thought all the other nodes sequentially
-        for(int i=this.nodeIdx+1;i<this.nodeIdx+1+this.nodes.size();i++) {
-
-            // calculate circular idx
-            int idx = i % this.nodes.size();
-
-            // find the first which is active
-            if(nodes.get(idx).isActive()) {
-                this.nodeIdx = idx;
-                node = this.nodes.get(idx);
-                this.nodesWeight.put(node.getID(), 0);
-                break;
-            }
-        }
-        return node;
     }
 
 }
