@@ -20,18 +20,18 @@ public class EServerManager extends Thread {
     private final String ComputationServiceName = "Computation";
     private final SingletonLogger logger = SingletonLogger.getInstance();
     private EServiceNode node;
-    private final EComputationServer server;
+    private EComputationServer server;
     private ServerSocket serverSocket;
     private ServiceGUI serviceGUI;
     private final int sendRetrials = 3;
     private final int retrialWaitPeriod = 500;
 
     public EServerManager() {
-        this.server = new EComputationServer();
         this.serviceGUI=new ServiceGUI(this);
     }
 
-    public void startServer(int serviceRegistryPort, int port) throws Exception {
+    public void startServer(int serviceRegistryPort, int port, int maxFifoSize) throws Exception {
+        this.server = new EComputationServer(maxFifoSize);
 
         // try to connect to service registry
         TSocket socket = null;
@@ -110,7 +110,7 @@ public class EServerManager extends Thread {
                 break;
 
                 case ComputationRequest:
-                    this.logger.log(String.format("HeartBeat: %s", this.node.toString()), EColor.GREEN);
+                    this.logger.log(String.format("ComputationRequest: %s", this.node.toString()), EColor.GREEN);
 
                     EComputationPayload request = (EComputationPayload) message.getMessage();
                     request.setServerID(this.node.getID());

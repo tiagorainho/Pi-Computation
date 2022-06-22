@@ -16,6 +16,7 @@ import Common.Entities.EMessage;
 import Common.Entities.EMessageRegistry;
 import Common.Entities.EServiceNode;
 import Common.Entities.SingletonLogger;
+import Common.Entities.SyncRequestsPayload;
 import Common.Entities.TopologyChangePayload;
 import Common.Enums.EColor;
 import Common.Enums.EMessageType;
@@ -50,7 +51,7 @@ public class ELoadBalancerManager extends Thread {
         this.masterLoadBalancerPort = masterLoadBalancerPort;
 
         // try to connect to service registry
-        this.loadBalancer = new ELoadBalancer(weightPerNode);
+        this.loadBalancer = new ELoadBalancer();
         TSocket socket = null;
         try {
             socket = new TSocket(serviceRegistryPort);
@@ -204,7 +205,9 @@ public class ELoadBalancerManager extends Thread {
                     }
 
                     case SyncronizePendingRequests -> {
-                        this.pendingComputations = (Map<Integer, EComputationPayload>) message.getMessage();
+                        SyncRequestsPayload payload = (SyncRequestsPayload) message.getMessage();
+                        this.pendingComputations = payload.getPendingRequests();
+                        this.loadBalancer = payload.getLoadBalancer();
                         this.logger.log(String.format("Syncronized pending requests, n: %d", this.pendingComputations.size()));
                     }
                 }
@@ -298,10 +301,12 @@ public class ELoadBalancerManager extends Thread {
 
                     // handle payloads which its computation server went down
                     for(EComputationPayload rejectedPayload: rejectedPayloads) {
+
+                        this.loadBalancer.aliviate(rejectedPayload);
                         
                         // if there is still active servers
                         if(this.loadBalancer.hasNext()) {
-                            EServiceNode nodeToRequest = this.loadBalancer.next(rejectedPayload.getIteractions());
+                            EServiceNode nodeToRequest = this.loadBalancer.load(rejectedPayload);
 
                             this.logger.log(String.format("Computation Server: resend %s to %s", rejectedPayload.toString(), nodeToRequest.toString()), EColor.GREEN);
     
@@ -343,7 +348,7 @@ public class ELoadBalancerManager extends Thread {
                     }
 
                     // get the next computation server to be used
-                    EServiceNode nodeToRequest = this.loadBalancer.next(computationPayload.getIteractions());
+                    EServiceNode nodeToRequest = this.loadBalancer.load(computationPayload);
                     computationPayload.setServerID(nodeToRequest.getID());
 
                     this.logger.log(String.format("Computation request: %s will be proxied to %s", computationPayload.toString(), nodeToRequest.toString()), EColor.GREEN);
@@ -363,10 +368,13 @@ public class ELoadBalancerManager extends Thread {
                 case ComputationRejection -> {
                     EComputationPayload computationPayload = (EComputationPayload) message.getMessage();
 
-                    this.logger.log(String.format("Computation Rejection on request: %s",computationPayload), EColor.RED);
+                    // decrease server load
+                    this.loadBalancer.aliviate(computationPayload);
 
-                    computationPayload.setServerID(null);
+                    this.logger.log(String.format("Computation Rejection on request: %s",computationPayload), EColor.RED);
                     
+                    computationPayload.setServerID(null);
+
                     // proxy error back to the user that the server cannot handle more computations
                     TSocket errorSocket = new TSocket(computationPayload.getClientPort());
                     errorSocket.send(new EMessage(EMessageType.ComputationRejection, computationPayload));
@@ -414,7 +422,9 @@ public class ELoadBalancerManager extends Thread {
                 TSocket socket;
                 try {
                     socket = new TSocket(loadBalancerNode.getPort());
-                    socket.send(new EMessage(EMessageType.SyncronizePendingRequests, this.pendingComputations));
+                    
+                    SyncRequestsPayload payload = new SyncRequestsPayload(this.pendingComputations, this.loadBalancer);
+                    socket.send(new EMessage(EMessageType.SyncronizePendingRequests, payload));
                     socket.close();
                 } catch (IOException e) {
                     e.printStackTrace();

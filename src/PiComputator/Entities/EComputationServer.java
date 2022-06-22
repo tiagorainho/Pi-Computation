@@ -11,13 +11,16 @@ import Common.Monitors.MPriorityQueue;
 
 public class EComputationServer {
 
-    public final int maxFifoSize = 3;
-    public final int maxPiNumberOfIterations = 15;
+    public final int maxFifoSize;
+    private int weight;
+    public final int maxWeight = 20;
     MPriorityQueue<StoredRequest> priorityQueue;
     private final ReentrantLock lock;
     private final SingletonLogger logger;
 
-    public EComputationServer() {
+    public EComputationServer(Integer maxFifoSize) {
+        this.weight = 0;
+        this.maxFifoSize = maxFifoSize;
         this.logger = SingletonLogger.getInstance();
         this.priorityQueue = new MPriorityQueue<>(this.maxFifoSize);
         this.lock = new ReentrantLock();
@@ -28,8 +31,13 @@ public class EComputationServer {
     }
 
     public Double computePI(Integer iterations, Integer deadline) {
+        if(this.weight + iterations > this.maxWeight)
+            return null;
+
         if(this.priorityQueue.isFull())
             return null;
+        
+        this.weight += iterations;
 
         // add request to a priority queue based on the deadline
         Condition cond = this.lock.newCondition();
@@ -44,6 +52,7 @@ public class EComputationServer {
             e.printStackTrace();
         } finally {
             this.lock.unlock();
+            this.weight -= iterations;
         }
         return request.getPI();
     }

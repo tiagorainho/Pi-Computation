@@ -11,7 +11,7 @@ public class Main {
         // create monitor
         final int heartBeatWindowSize = 3;
         final int heartBeatPeriod = 1000;
-        final int port = 5000;
+        final int port = 5001;
 
         IMonitor monitor = null;
         try {

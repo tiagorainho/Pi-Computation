@@ -9,7 +9,7 @@ public class Main {
         EServerManager server = new EServerManager();
         
         try {
-            server.startServer(100, 300);
+            server.startServer(100, 300, 2);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
