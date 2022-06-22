@@ -5,7 +5,6 @@ import java.util.List;
 
 import Common.Entities.EComputationPayload;
 import Common.Entities.EServiceNode;
-import Common.Interfaces.IServiceIterator;
 
 public class ELoadBalancer {
 
@@ -21,10 +20,6 @@ public class ELoadBalancer {
 
     public void updateNodes(List<EServiceNode> nodes) {
         this.nodes = nodes;
-        for(EServiceNode node: nodes) {
-            if(!this.nodes.contains(node))
-                node.set("weight", 0);
-        }
     }
 
     public boolean hasNext() {
@@ -37,10 +32,10 @@ public class ELoadBalancer {
     public EServiceNode load(EComputationPayload computationPayload) {
         
         // find the node with the least amount of weight
-        EServiceNode minNode = this.nodes.stream().min(Comparator.comparingInt((node) -> (int) node.get("weight"))).get();
+        EServiceNode minNode = this.nodes.stream().min(Comparator.comparingInt((node) -> node.getWeight())).get();
 
         // add weight
-        minNode.set("weight", (int) minNode.get("weight") + computationPayload.getIteractions());
+        minNode.setWeight(minNode.getWeight()+computationPayload.getIteractions());
 
         return minNode;
     }
@@ -50,8 +45,8 @@ public class ELoadBalancer {
         int weight = computationPayload.getIteractions();
         for(EServiceNode node: this.nodes) {
             if(node.getID().equals(nodeID)) {
-                int newWeight = (int) node.get("weight") - weight;
-                node.set("weight", newWeight);
+                int newWeight = node.getWeight() - weight;
+                node.setWeight(newWeight);
             }
         }
     }

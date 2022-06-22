@@ -15,9 +15,11 @@ public class EServiceNode implements IServiceNode, Serializable, IDeepCopyable {
     private final Integer desiredPort;
     private boolean active;
     private Map<String, Object> params;
+    private int weight;
 
     public EServiceNode(int id, String serviceName, int desiredPort, int port) {
         this.id = id;
+        this.weight = 0;
         this.serviceName = serviceName;
         this.port = port;
         this.desiredPort = desiredPort;
@@ -27,12 +29,12 @@ public class EServiceNode implements IServiceNode, Serializable, IDeepCopyable {
 
     public Integer getDesiredPort() { return this.desiredPort; }
 
-    public void set(String name, Object obj) {
-        this.params.put(name, obj);
+    public void setWeight(int weight) {
+        this.weight = weight;
     }
 
-    public Object get(String name) {
-        return this.params.get(name);
+    public int getWeight() {
+        return this.weight;
     }
 
     public void updatePort(int port) {
