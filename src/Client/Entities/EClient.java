@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import Client.GUI.ClientGUI;
 import Common.Entities.EComputationPayload;
 import Common.Entities.EMessage;
 import Common.Entities.EMessageRegistry;
@@ -24,10 +25,14 @@ public class EClient extends Thread {
     private final int numberOfRetries = 3;
     private final int retryWaitPeriod = 200;
     private final String ClientServiceName = "Client";
+    private ClientGUI clientGUI;
 
-    public EClient(int serviceRegistryPort, int serverPort) throws Exception {
+    public EClient(){
         this.requestCounter = new AtomicInteger(0);
+        this.clientGUI=new ClientGUI(this);
+    }
 
+    public void startClient(int serviceRegistryPort, int serverPort) throws Exception {
         // try to connect to service registry
         TSocket socket = null;
         try {
@@ -57,6 +62,7 @@ public class EClient extends Thread {
                 this.logger.log(String.format("Registry received: %s", this.node));
                 this.serverSocket = new ServerSocket(this.node.getPort());
             }
+            clientGUI.setTitle("Client "+node.getID());
         }
         catch(IOException e) {
             e.printStackTrace();
@@ -78,7 +84,8 @@ public class EClient extends Thread {
                 try {
                     payload = new EComputationPayload(this.serverSocket.getLocalPort(), 1, this.node.getID(), requestID, interactions, deadline);
                     EMessage message = new EMessage(EMessageType.ComputationRequest, payload);
-    
+                    
+                    clientGUI.addRequest(payload);
                     this.logger.log(String.format("Sending computation payload: %s", payload.toString()));
     
                     socket = new TSocket(loadBalancerPort);
@@ -138,12 +145,14 @@ public class EClient extends Thread {
 
                 case ComputationRejection -> {
                     EComputationPayload payload = (EComputationPayload) message.getMessage();
+                    clientGUI.updateRequest(payload);
 
                     System.out.println(String.format("%s: %s", messageType.toString(), (payload==null)? "":payload.toString()));
                 }
 
                 case ComputationResult -> {
                     EComputationPayload payload = (EComputationPayload) message.getMessage();
+                    clientGUI.updateRequest(payload);
 
                     System.out.println(String.format("%s: %s", messageType.toString(), (payload==null)? "":payload.toString()));
                 }

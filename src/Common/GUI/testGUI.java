@@ -16,6 +16,6 @@ public class testGUI {
         LoadBalancerGUI l = new LoadBalancerGUI(0);
         m.addService(new EServiceNode(0, "LoadBalancer", 0, 0));
         */
-        ClientGUI c = new ClientGUI(0);
+        ClientGUI c = new ClientGUI(null);
     }
 }

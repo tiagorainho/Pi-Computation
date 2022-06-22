@@ -68,7 +68,9 @@ public class EServerManager extends Thread {
             e.printStackTrace();
         }
         
-        this.run();
+        new Thread(() -> {
+            this.run();
+        }).start();
     }
 
     @Override
@@ -114,6 +116,7 @@ public class EServerManager extends Thread {
 
                     EComputationPayload request = (EComputationPayload) message.getMessage();
                     request.setServerID(this.node.getID());
+                    serviceGUI.addRequest(request);
 
                     Integer loadBalancerPort = request.getLoadbalancerPort();
 
@@ -126,6 +129,7 @@ public class EServerManager extends Thread {
                         this.logger.log(String.format("Sending error response to Load Balancer on port %d: %s", loadBalancerPort, response.toString()), EColor.RED);
 
                         request.setCode(3);
+                        serviceGUI.updateRequest(request);
 
                         // notify the load balancer with N retrials
                         for(int i=0; i<this.sendRetrials;i++) {
@@ -148,6 +152,7 @@ public class EServerManager extends Thread {
 
                     request.setPI(pi);
                     request.setCode(2);
+                    serviceGUI.updateRequest(request);
 
                     response = new EMessage(EMessageType.ComputationResult, request);
 

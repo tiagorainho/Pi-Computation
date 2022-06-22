@@ -5,13 +5,11 @@
 package Monitor.GUI;
 
 import java.awt.Color;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 import Common.Entities.EComputationPayload;
-import Common.Entities.EMessage;
 import Common.Entities.EServiceNode;
 import Common.Enums.EStatus;
 import Monitor.Entities.EMonitor;
@@ -54,6 +52,12 @@ public class MonitorGUI extends javax.swing.JFrame {
                 servicesPanels.put(node.getID(),p);
                 PService.addTab("Pi"+node.getID(), p);
                 serviceTabs.add(node.getID());
+                break;
+            case "Client":
+                clientPanels.put(node.getID(),p);
+                PClient.addTab("Client"+node.getID(), p);
+                clientTabs.add(node.getID());
+                break;
         }
     }
 
@@ -68,6 +72,12 @@ public class MonitorGUI extends javax.swing.JFrame {
                 servicesPanels.remove(node.getID());
                 PService.removeTabAt(serviceTabs.indexOf(node.getID()));
                 serviceTabs.remove(node.getID());
+                break;
+            case "Client":
+                clientPanels.remove(node.getID());
+                PClient.removeTabAt(clientTabs.indexOf(node.getID()));
+                clientTabs.remove(node.getID());
+                break;
         }
     }
 
@@ -79,6 +89,10 @@ public class MonitorGUI extends javax.swing.JFrame {
                 break;
             case "Computation":
                 servicesPanels.get(node.getID()).addRequest(data);
+                break;
+            case "Client":
+                clientPanels.get(node.getID()).addRequest(data);
+                break;
         }
     }
 
@@ -102,6 +116,9 @@ public class MonitorGUI extends javax.swing.JFrame {
             case "Computation":
                 servicesPanels.get(node.getID()).updateRequest(data);
                 break;
+            case "Client":
+                clientPanels.get(node.getID()).updateRequest(data);
+                break;
         }
     }
 
@@ -112,25 +129,33 @@ public class MonitorGUI extends javax.swing.JFrame {
                 break;
             case "Computation":
                 servicesPanels.get(node.getID()).deleteRequest(payload.getRequestID());
+                break;
+            case "Client":
+                clientPanels.get(node.getID()).deleteRequest(payload.getRequestID());
+                break;
         }
     }
 
     public void heartBeat(EServiceNode node, EStatus status){
         PanelMonitor p=null;
-        Color c;
+        Color c=getBackgroundColor(status);
         switch(node.getServiceName()){
             case "LoadBalancer":
                 p=lbPanels.get(node.getID());
-                c = getBackgroundColor(status);
                 if(c!=null){
-                    PLoadBalancer.setBackgroundAt(lbTabs.get(node.getID()),c );
+                    PLoadBalancer.setBackgroundAt(lbTabs.indexOf(node.getID()), c);
                 }
                 break;
             case "Computation":
                 p=servicesPanels.get(node.getID());
-                c = getBackgroundColor(status);
                 if(c!=null){
-                    PService.setBackgroundAt(lbTabs.get(node.getID()),c );
+                    PService.setBackgroundAt(serviceTabs.indexOf(node.getID()), c);
+                }
+                break;
+            case "Client":
+                p=clientPanels.get(node.getID());
+                if(c!=null){
+                    PClient.setBackgroundAt(clientTabs.indexOf(node.getID()), c);
                 }
                 break;
         }
@@ -175,7 +200,7 @@ public class MonitorGUI extends javax.swing.JFrame {
         jTextField1 = new javax.swing.JTextField();
         jLabel7 = new javax.swing.JLabel();
         PService = new javax.swing.JTabbedPane();
-        jTabbedPane2 = new javax.swing.JTabbedPane();
+        PClient = new javax.swing.JTabbedPane();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -187,7 +212,11 @@ public class MonitorGUI extends javax.swing.JFrame {
 
         jLabel5.setText("Heart Beat Period:");
 
-        jButton1.setText("Update");
+        portTextField.setText("5000");
+        hbWSTextField.setText("3");
+        hbPeriodTextField.setText("1000");
+
+        jButton1.setText("Start");
         jButton1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton1ActionPerformed(evt);
@@ -249,7 +278,7 @@ public class MonitorGUI extends javax.swing.JFrame {
         jTabbedPane1.addTab("Load Balancers", PLoadBalancer);
 
         jTabbedPane1.addTab("Services", PService);
-        jTabbedPane1.addTab("Clients", jTabbedPane2);
+        jTabbedPane1.addTab("Clients", PClient);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -284,7 +313,7 @@ public class MonitorGUI extends javax.swing.JFrame {
         }
         try{
             if(hbPeriod!=-100){
-                monitor.updateMonitor(port,hbWS,hbPeriod);
+                monitor.startMonitor(port,hbWS,hbPeriod);
             }
         } catch(Exception e){
             System.out.println("Failed to create new EMonitor instance");
@@ -339,7 +368,7 @@ public class MonitorGUI extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JTabbedPane jTabbedPane1;
-    private javax.swing.JTabbedPane jTabbedPane2;
+    private javax.swing.JTabbedPane PClient;
     private javax.swing.JTextField jTextField1;
     private javax.swing.JTextField portTextField;
     private javax.swing.JTextField hbWSTextField;

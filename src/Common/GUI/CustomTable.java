@@ -29,7 +29,7 @@ public class CustomTable extends JTable{
             rl.lock();
             DefaultTableModel model=(DefaultTableModel)this.getModel();
             for(int i=0;i<model.getRowCount();i++){
-                if(model.getValueAt(i, 0)==data[0]){
+                if(model.getValueAt(i, 0).equals(data[0])){
                     for(int j=1;j<model.getColumnCount();j++){
                         model.setValueAt(data[j], i, j);
                     }
@@ -46,7 +46,7 @@ public class CustomTable extends JTable{
             rl.lock();
             DefaultTableModel model=(DefaultTableModel)this.getModel();
             for(int i=0;i<model.getRowCount();i++){
-                if(model.getValueAt(i, 0)==idx){
+                if(model.getValueAt(i, 0).equals(idx)){
                     model.removeRow(i);
                 }
             }
@@ -79,7 +79,7 @@ public class CustomTable extends JTable{
             rl.lock();
             DefaultTableModel model=(DefaultTableModel)this.getModel();
             for(int i=0;i<model.getRowCount();i++){
-                if(model.getValueAt(i, 0)==idx){
+                if(model.getValueAt(i, 0).equals(idx)){
                     try{
                         this.addRowSelectionInterval(i, i);
                         Thread.sleep(200);

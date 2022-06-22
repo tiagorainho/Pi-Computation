@@ -31,7 +31,7 @@ public class StatusBox extends javax.swing.JTextField{
                 case heartBeat:
                     this.setBackground(Color.YELLOW);
                     try{
-                        Thread.sleep(50);
+                        Thread.sleep(30);
                     }catch(Exception e){}
                     break;
                 case active:

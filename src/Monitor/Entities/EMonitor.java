@@ -31,19 +31,19 @@ public class EMonitor extends Thread implements IMonitor {
     private final SingletonLogger logger = SingletonLogger.getInstance();
     private MonitorGUI monitorGUI;
 
-    public EMonitor(int port, int heartBeatWindowSize, int heartBeatPeriod) throws IOException {
-        this.socket = new ServerSocket(port);
-        this.heartBeatWindowSize = heartBeatWindowSize;
-        this.heartBeatPeriod = heartBeatPeriod;
+    public EMonitor() throws IOException {
         this.serviceDiscovery = new EServiceDiscovery();
         this.servicesDependencies = new HashMap<>();
         this.monitorGUI=new MonitorGUI(this);
     }
 
-    public void updateMonitor(int port, int heartBeatWindowSize, int heartBeatPeriod) throws IOException {
+    public void startMonitor(int port, int heartBeatWindowSize, int heartBeatPeriod) throws IOException {
         this.socket = new ServerSocket(port);
         this.heartBeatWindowSize = heartBeatWindowSize;
         this.heartBeatPeriod = heartBeatPeriod;
+        new Thread(() -> {
+            this.run();
+        }).start();
     }
 
     @Override

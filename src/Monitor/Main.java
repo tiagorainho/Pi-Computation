@@ -15,14 +15,10 @@ public class Main {
 
         IMonitor monitor = null;
         try {
-            monitor = new EMonitor(port, heartBeatWindowSize, heartBeatPeriod);
+            monitor = new EMonitor();
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        Thread monitorThread = (Thread) monitor;
-        monitorThread.start();
-
     }
 
 }

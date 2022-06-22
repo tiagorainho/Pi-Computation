@@ -21,7 +21,7 @@ public class EComputationServer {
         this.logger = SingletonLogger.getInstance();
         this.priorityQueue = new MPriorityQueue<>(this.maxFifoSize);
         this.lock = new ReentrantLock();
-        for(int i=0;i<1;i++) {
+        for(int i=0;i<3;i++) {
             final int id = i;
             new Thread(() -> this.runComputationThread(id)).start();
         }

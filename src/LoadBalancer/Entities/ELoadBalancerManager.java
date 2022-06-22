@@ -354,6 +354,7 @@ public class ELoadBalancerManager extends Thread {
                     // proxy the request to a server
                     TSocket newRequestSocket = new TSocket(nodeToRequest.getPort());
                     newRequestSocket.send(new EMessage(EMessageType.ComputationRequest, computationPayload));
+                    lbGUI.highlightService(nodeToRequest);
                     //newRequestSocket.close();
 
                     // syncronize the other load balancers

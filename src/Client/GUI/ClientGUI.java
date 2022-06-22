@@ -4,6 +4,7 @@
  */
 package Client.GUI;
 
+import Client.Entities.EClient;
 import Common.Entities.EComputationPayload;
 import Common.GUI.CustomTable;
 
@@ -13,17 +14,19 @@ import Common.GUI.CustomTable;
  */
 public class ClientGUI extends javax.swing.JFrame {
 
+    private EClient client;
     /**
      * Creates new form ClientGUI
      */
-    public ClientGUI(int ID) {
+    public ClientGUI(EClient client) {
         initComponents();
         this.setVisible(true);
-        this.setTitle("Client "+ID);
+        this.setTitle("Client");
+        this.client=client;
     }
 
     public void addRequest(EComputationPayload payload){
-        Object data[] = {payload.getRequestID(),payload.getIteractions(),0,payload.getDeadline()};
+        Object data[] = {payload.getRequestID(),payload.getIteractions(),"-",payload.getDeadline(),payload.getCode()};
         pendingTable.addRow(data);
 
     }
@@ -32,17 +35,17 @@ public class ClientGUI extends javax.swing.JFrame {
         Object[] data;
         switch(payload.getCode()){
             default:
-                data=new Object[]{payload.getRequestID(),payload.getIteractions(),"-",payload.getDeadline()};
+                data=new Object[]{payload.getRequestID(),payload.getIteractions(),"-",payload.getDeadline(),payload.getCode()};
                 break;
             case 2:
-                data=new Object[]{payload.getRequestID(),payload.getIteractions(),payload.getPI(),payload.getDeadline()};
+                data=new Object[]{payload.getRequestID(),payload.getIteractions(),payload.getPI(),payload.getDeadline(),payload.getCode()};
                 break;
             case 3:
-                data=new Object[]{payload.getRequestID(),payload.getIteractions(),-1,payload.getDeadline()};
+                data=new Object[]{payload.getRequestID(),payload.getIteractions(),-1,payload.getDeadline(),payload.getCode()};
                 break;
         }
         pendingTable.deleteRow(payload.getRequestID());
-        pendingTable.addRow(data);
+        executedTable.addRow(data);
     }
 
     public void deleteRequest(EComputationPayload payload){
@@ -70,7 +73,13 @@ public class ClientGUI extends javax.swing.JFrame {
         jLabel3 = new javax.swing.JLabel();
         jLabel4 = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
-        deadlineTextField = new javax.swing.JTextField();
+        deadlineTF = new javax.swing.JTextField();
+        jLabel6 = new javax.swing.JLabel();
+        monitorPortTF = new javax.swing.JTextField();
+        jLabel7 = new javax.swing.JLabel();
+        serverPortTF = new javax.swing.JTextField();
+        jLabel8 = new javax.swing.JLabel();
+        startButton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -79,7 +88,7 @@ public class ClientGUI extends javax.swing.JFrame {
         executedTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {},
             new String [] {
-                "ID","NI","Pi","Deadline","Status"
+                "RequestID", "NI", "Result", "Deadline", "Status"
             }
         ));
         jScrollPane1.setViewportView(executedTable);
@@ -87,7 +96,7 @@ public class ClientGUI extends javax.swing.JFrame {
         pendingTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {},
             new String [] {
-                "ID","NI","Pi","Deadline","Status"
+                "RequestID", "NI", "Result", "Deadline", "Status"
             }
         ));
         jScrollPane2.setViewportView(pendingTable);
@@ -107,6 +116,23 @@ public class ClientGUI extends javax.swing.JFrame {
 
         jLabel5.setText("Deadline:");
 
+        jLabel6.setText("Monitor Port:");
+
+        jLabel7.setText("Server Port:");
+
+        jLabel8.setText("Configuration");
+
+        monitorPortTF.setText("5000");
+
+        serverPortTF.setText("12345");
+
+        startButton.setText("Start");
+        startButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                startButtonActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -118,30 +144,49 @@ public class ClientGUI extends javax.swing.JFrame {
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
                 .addContainerGap())
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(37, 37, 37)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(jLabel2)
-                    .addComponent(jLabel3))
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(37, 37, 37)
+                        .addComponent(jLabel2))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(84, 84, 84)
+                        .addComponent(jLabel6)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(0, 39, Short.MAX_VALUE)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                                .addComponent(jLabel4)
-                                .addGap(65, 65, 65))
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                    .addComponent(jButton1)
-                                    .addComponent(jLabel1))
-                                .addGap(211, 211, 211))))
+                        .addGap(172, 172, 172)
+                        .addComponent(deadlineTF, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(0, 0, Short.MAX_VALUE))
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addComponent(NITextField, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(58, 58, 58)
-                        .addComponent(jLabel5)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(deadlineTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(0, 0, Short.MAX_VALUE))))
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addComponent(monitorPortTF, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(43, 43, 43)
+                                .addComponent(jLabel7)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(serverPortTF, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addComponent(NITextField, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(58, 58, 58)
+                                .addComponent(jLabel5)))
+                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addGap(0, 39, Short.MAX_VALUE)
+                        .addComponent(jLabel1)
+                        .addGap(211, 211, 211))))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                .addGap(65, 65, 65)
+                .addComponent(jLabel3)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jLabel4)
+                .addGap(67, 67, 67))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel8, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jButton1, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(startButton, javax.swing.GroupLayout.Alignment.TRAILING))
+                .addGap(208, 208, 208))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -155,17 +200,27 @@ public class ClientGUI extends javax.swing.JFrame {
                         .addComponent(NITextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                         .addComponent(jLabel5)
-                        .addComponent(deadlineTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addGap(18, 18, 18)
+                        .addComponent(deadlineTF, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jButton1)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 18, Short.MAX_VALUE)
+                .addComponent(jLabel8)
+                .addGap(18, 18, 18)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(serverPortTF, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel7)
+                    .addComponent(monitorPortTF, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel6))
+                .addGap(23, 23, 23)
+                .addComponent(startButton)
+                .addGap(18, 18, 18)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel3)
                     .addComponent(jLabel4))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGap(18, 18, 18)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 231, Short.MAX_VALUE)
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 141, Short.MAX_VALUE)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
                 .addGap(15, 15, 15))
         );
 
@@ -184,25 +239,54 @@ public class ClientGUI extends javax.swing.JFrame {
         );
 
         pack();
-    }// </editor-fold>                        
+    }// </editor-fold>     
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {                                         
         // TODO add your handling code here:
         int NI=-100, deadline=-100;
         try{
             NI=Integer.parseInt(NITextField.getText());
-            deadline=Integer.parseInt(deadlineTextField.getText());
+            deadline=Integer.parseInt(deadlineTF.getText());
         } catch (Exception e) {
             System.out.println("Failed to convert value to int");
         }
         try{
             if(deadline!=-100){
                 //
+                try {
+            
+                    client.sendRequest(6000, NI, deadline);
+                } catch (Exception e1) {
+                    e1.printStackTrace();
+                }
             }
         } catch(Exception e){
             System.out.println("Failed to create new EMonitor instance");
         }
     }  
+
+    private void startButtonActionPerformed(java.awt.event.ActionEvent evt) {                                            
+        // TODO add your handling code here:
+        int monitorPort=-100, serverPort=-100;
+        try{
+            monitorPort=Integer.parseInt(monitorPortTF.getText());
+            serverPort=Integer.parseInt(serverPortTF.getText());
+        } catch (Exception e) {
+            System.out.println("Failed to convert value to int");
+        }
+        try{
+            if(serverPort!=-100){
+                //
+                try {
+                    client.startClient(monitorPort, serverPort);
+                } catch (Exception e1) {
+                    e1.printStackTrace();
+                }
+            }
+        } catch(Exception e){
+            System.out.println("Failed to create new EMonitor instance");
+        }
+    }
 
     /**
      * @param args the command line arguments
@@ -234,24 +318,30 @@ public class ClientGUI extends javax.swing.JFrame {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new ClientGUI(0).setVisible(true);
+                new ClientGUI(null).setVisible(true);
             }
         });
     }
 
-    // Variables declaration - do not modify                     
-    private javax.swing.JTextField NITextField;
-    private javax.swing.JTextField deadlineTextField;
-    private CustomTable executedTable;
-    private javax.swing.JButton jButton1;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel2;
-    private javax.swing.JLabel jLabel3;
-    private javax.swing.JLabel jLabel4;
-    private javax.swing.JLabel jLabel5;
-    private javax.swing.JPanel jPanel1;
-    private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JScrollPane jScrollPane2;
-    private CustomTable pendingTable;
+    // Variables declaration - do not modify                       
+     private javax.swing.JTextField NITextField;
+     private javax.swing.JTextField deadlineTF;
+     private CustomTable executedTable;
+     private javax.swing.JButton jButton1;
+     private javax.swing.JLabel jLabel1;
+     private javax.swing.JLabel jLabel2;
+     private javax.swing.JLabel jLabel3;
+     private javax.swing.JLabel jLabel4;
+     private javax.swing.JLabel jLabel5;
+     private javax.swing.JLabel jLabel6;
+     private javax.swing.JLabel jLabel7;
+     private javax.swing.JLabel jLabel8;
+     private javax.swing.JPanel jPanel1;
+     private javax.swing.JScrollPane jScrollPane1;
+     private javax.swing.JScrollPane jScrollPane2;
+     private javax.swing.JTextField monitorPortTF;
+     private CustomTable pendingTable;
+     private javax.swing.JTextField serverPortTF;
+     private javax.swing.JButton startButton;
     // End of variables declaration                   
 }

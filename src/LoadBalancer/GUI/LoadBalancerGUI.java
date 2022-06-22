@@ -76,6 +76,10 @@ public class LoadBalancerGUI extends javax.swing.JFrame {
         statusBox.changeColor(status);
     }
 
+    public void highlightService(EServiceNode node){
+        serviceTable.highlightRow(node.getID());
+    }
+
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -112,11 +116,15 @@ public class LoadBalancerGUI extends javax.swing.JFrame {
 
         jLabel4.setText("Service registry port:");
 
-        registryPortTextField.setText("\n");
+        registryPortTextField.setText("5000");
+
+        weightNodeTextField.setText("20");
+
+        masterLBField.setText("6000");
 
         jLabel5.setText("Weight per node:");
 
-        updateButton.setText("Update");
+        updateButton.setText("Start");
         updateButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 updateButtonActionPerformed(evt);
@@ -124,8 +132,6 @@ public class LoadBalancerGUI extends javax.swing.JFrame {
         });
 
         jLabel1.setText("Master LB port:");
-
-        masterLBField.setText("\n");
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
@@ -270,7 +276,11 @@ public class LoadBalancerGUI extends javax.swing.JFrame {
         }
         try{
             if(masterPort!=-100){
-                //
+                try {
+                    lb.startLoadBalancer(serviceRegistryPort, weight, masterPort);
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
             }
         } catch(Exception e){
             System.out.println("Failed to create new EMonitor instance");

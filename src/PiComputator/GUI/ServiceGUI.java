@@ -101,7 +101,11 @@ public class ServiceGUI extends javax.swing.JFrame {
 
         jLabel5.setText("Service Registry Port:");
 
-        updateButton.setText("Update");
+        portTextField.setText("3007");
+
+        serviceRegistryPortTF.setText("5000");
+
+        updateButton.setText("Start");
         updateButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 updateButtonActionPerformed(evt);
@@ -227,7 +231,11 @@ public class ServiceGUI extends javax.swing.JFrame {
         }
         try{
             if(serviceRegistryPort!=-100){
-                //
+                try {
+                    server.startServer(serviceRegistryPort, port);
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
             }
         } catch(Exception e){
             System.out.println("Failed to create new EMonitor instance");
