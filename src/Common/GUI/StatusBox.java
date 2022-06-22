@@ -7,12 +7,14 @@ import javax.swing.border.Border;
 import Common.Enums.EStatus;
 
 import java.awt.Color;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class StatusBox extends javax.swing.JTextField{    
     //Border Settings and Colors
     private static final int borderWidth=2;
-    private static final Border black=BorderFactory.createLineBorder(Color.black, borderWidth);;
-    private static final Border red = BorderFactory.createLineBorder(Color.red,borderWidth);     
+    private static final Border black=BorderFactory.createLineBorder(Color.black, borderWidth);
+    private static final Border red = BorderFactory.createLineBorder(Color.red,borderWidth);
+    private final ReentrantLock rl=new ReentrantLock();     
     
     public StatusBox(int x, int y){
         this.setHorizontalAlignment(JTextField.CENTER);
@@ -23,23 +25,30 @@ public class StatusBox extends javax.swing.JTextField{
     }
 
     public void changeColor(EStatus c){
-        switch(c){
-            case heartBeat:
-                this.setBackground(Color.YELLOW);
-                try{
-                    Thread.sleep(80);
-                }catch(Exception e){}
-                break;
-            case active:
-                this.setBackground(Color.GREEN);
-                break;
-            case stopped:
-                this.setBackground(Color.RED);
-                break;
-            case notResponding:
-                this.setBackground(Color.ORANGE);
-                break;
+        try{
+            rl.lock();
+            switch(c){
+                case heartBeat:
+                    this.setBackground(Color.YELLOW);
+                    try{
+                        Thread.sleep(50);
+                    }catch(Exception e){}
+                    break;
+                case active:
+                    this.setBackground(Color.GREEN);
+                    break;
+                case stopped:
+                    this.setBackground(Color.RED);
+                    break;
+                case notResponding:
+                    this.setBackground(Color.ORANGE);
+                    break;
+            }
+        }catch(Exception e){}
+        finally{
+            rl.unlock();
         }
+        
 
     }
 }

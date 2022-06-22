@@ -19,7 +19,9 @@ import Common.Entities.SingletonLogger;
 import Common.Entities.TopologyChangePayload;
 import Common.Enums.EColor;
 import Common.Enums.EMessageType;
+import Common.Enums.EStatus;
 import Common.Threads.TSocket;
+import LoadBalancer.GUI.LoadBalancerGUI;
 
 public class ELoadBalancerManager extends Thread {
 
@@ -33,12 +35,14 @@ public class ELoadBalancerManager extends Thread {
     private final List<String> dependenciesList = List.of(LBserviceName, ComputationServiceName);
     private final Map<String, List<EServiceNode>> dependentNodesByService;
     private Map<Integer, EComputationPayload> pendingComputations;
+    private LoadBalancerGUI lbGUI;
 
     private final SingletonLogger logger = SingletonLogger.getInstance();
 
     public ELoadBalancerManager() {
         this.dependentNodesByService = new HashMap<>();
         this.pendingComputations = new HashMap<>();
+        this.lbGUI=new LoadBalancerGUI(this);
     }
 
     public void startLoadBalancer(int serviceRegistryPort, int weightPerNode, int masterLoadBalancerPort) throws Exception {
@@ -79,6 +83,8 @@ public class ELoadBalancerManager extends Thread {
                 throw new Exception("Error in the registry response");
             }
 
+            lbGUI.setTitle("Load Balancer "+node.getID());
+
             // wait until it becomes the main load balancer
             this.waitUntilMaster(serviceRegistryPort);
 
@@ -103,6 +109,8 @@ public class ELoadBalancerManager extends Thread {
                 switch(message.getMessageType()) {
                     case Heartbeat -> {
                         this.logger.log(String.format("HeartBeat Waiting: %s", this.node.toString()), EColor.GREEN);
+                        lbGUI.heartBeat(node, EStatus.heartBeat);
+                        lbGUI.heartBeat(node, EStatus.active);
 
                         temporarySocket.send(new EMessage(EMessageType.Heartbeat, null));
                     }
@@ -117,6 +125,9 @@ public class ELoadBalancerManager extends Thread {
 
                         // update the depencies state
                         this.dependentNodesByService.put(updatedService, registeredNodes);
+
+                        lbGUI.removeDependencies(updatedService);
+                        lbGUI.addDependencies(registeredNodes);
 
                         // break if the updated service is not a load balancer
                         if(updatedService.equals(ComputationServiceName)) {
@@ -252,6 +263,9 @@ public class ELoadBalancerManager extends Thread {
 
                     // update the depencies state
                     this.dependentNodesByService.put(updatedService, registeredNodes);
+
+                    lbGUI.removeDependencies(updatedService);
+                    lbGUI.addDependencies(registeredNodes);
 
                     // only continue if it is a topology change from a computational node
                     if(!updatedService.equals(ComputationServiceName)) break;

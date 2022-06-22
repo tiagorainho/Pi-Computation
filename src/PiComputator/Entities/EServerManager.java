@@ -13,6 +13,7 @@ import Common.Entities.SingletonLogger;
 import Common.Enums.EColor;
 import Common.Enums.EMessageType;
 import Common.Threads.TSocket;
+import PiComputator.GUI.ServiceGUI;
 
 public class EServerManager extends Thread {
 
@@ -21,9 +22,11 @@ public class EServerManager extends Thread {
     private EServiceNode node;
     private final EComputationServer server;
     private ServerSocket serverSocket;
+    private ServiceGUI serviceGUI;
 
     public EServerManager() {
         this.server = new EComputationServer();
+        this.serviceGUI=new ServiceGUI(this);
     }
 
     public void startServer(int serviceRegistryPort, int port) throws Exception {
@@ -59,6 +62,7 @@ public class EServerManager extends Thread {
                     this.serverSocket = new ServerSocket(this.node.getPort());
                     break;
             }
+            serviceGUI.setTitle("Service "+node.getID());
         }
         catch(IOException e) {
             e.printStackTrace();

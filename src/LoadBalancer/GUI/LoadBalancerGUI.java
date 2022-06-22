@@ -1,8 +1,12 @@
 package LoadBalancer.GUI;
 
+import java.util.List;
+
 import Common.Entities.EServiceNode;
+import Common.Enums.EStatus;
 import Common.GUI.CustomTable;
 import Common.GUI.StatusBox;
+import LoadBalancer.Entities.ELoadBalancerManager;
 
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
@@ -19,29 +23,34 @@ public class LoadBalancerGUI extends javax.swing.JFrame {
      * Creates new form LoadBalancerGUI
      */
     private StatusBox statusBox;
+    private ELoadBalancerManager lb;
 
-    public LoadBalancerGUI(int ID) {
+    public LoadBalancerGUI(ELoadBalancerManager lb) {
         initComponents();
         this.setVisible(true);
-        this.setTitle("Load Balancer "+ID);
-        statusBox=new StatusBox(140, 86);
+        this.setTitle("Load Balancer");
+        statusBox=new StatusBox(220, 86);
         jPanel1.add(statusBox);
+        this.lb=lb;
     }
 
-    public void addDependency(EServiceNode node){
-        Object[] data={node.getID(),node.getPort(),node.isActive()};
-        switch(node.getServiceName()){
-            case "LoadBalancer":
-                lbTable.addRow(data);
-                break;
-            case "Computation":
-                serviceTable.addRow(data);
-                break;
+    public void addDependencies(List<EServiceNode> nodes){
+        for(EServiceNode node:nodes){
+            Object[] data={node.getID(),node.getPort(),(node.isActive())?"active":"stopped"};
+            switch(node.getServiceName()){
+                case "LoadBalancer":
+                    lbTable.addRow(data);
+                    break;
+                case "Computation":
+                    serviceTable.addRow(data);
+                    break;
+            }
         }
+        
     }
 
     public void updateDependency(EServiceNode node){
-        Object[] data={node.getID(),node.getPort(),node.isActive()};
+        Object[] data={node.getID(),node.getPort(),(node.isActive())?"active":"stopped"};
         switch(node.getServiceName()){
             case "LoadBalancer":
                 lbTable.updateRow(data);
@@ -52,16 +61,21 @@ public class LoadBalancerGUI extends javax.swing.JFrame {
         }
     }
 
-    public void removeDependency(EServiceNode node){
-        switch(node.getServiceName()){
+    public void removeDependencies(String serviceType){
+        switch(serviceType){
             case "LoadBalancer":
-                lbTable.deleteRow(node.getID());
+                lbTable.deleteAllRows();
                 break;
             case "Computation":
-                serviceTable.deleteRow(node.getID());
+                serviceTable.deleteAllRows();
                 break;
         }
     }
+
+    public void heartBeat(EServiceNode node, EStatus status){
+        statusBox.changeColor(status);
+    }
+
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -245,6 +259,22 @@ public class LoadBalancerGUI extends javax.swing.JFrame {
 
     private void updateButtonActionPerformed(java.awt.event.ActionEvent evt) {                                             
         // TODO add your handling code here:
+        // TODO add your handling code here:
+        int serviceRegistryPort=-100, weight=-100, masterPort=-100;
+        try{
+            weight=Integer.parseInt(weightNodeTextField.getText());
+            serviceRegistryPort=Integer.parseInt(registryPortTextField.getText());
+            masterPort=Integer.parseInt(masterLBField.getText());
+        } catch (Exception e) {
+            System.out.println("Failed to convert value to int");
+        }
+        try{
+            if(masterPort!=-100){
+                //
+            }
+        } catch(Exception e){
+            System.out.println("Failed to create new EMonitor instance");
+        }
     }                                            
 
     /**
@@ -277,7 +307,7 @@ public class LoadBalancerGUI extends javax.swing.JFrame {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new LoadBalancerGUI(0).setVisible(true);
+                new LoadBalancerGUI(null).setVisible(true);
             }
         });
     }

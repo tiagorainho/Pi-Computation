@@ -50,6 +50,10 @@ public class MonitorGUI extends javax.swing.JFrame {
                 PLoadBalancer.addTab("LB"+node.getID(), p);
                 lbTabs.add(node.getID());
                 break;
+            case "Computation":
+                servicesPanels.put(node.getID(),p);
+                PService.addTab("Pi"+node.getID(), p);
+                serviceTabs.add(node.getID());
         }
     }
 
@@ -60,23 +64,43 @@ public class MonitorGUI extends javax.swing.JFrame {
                 PLoadBalancer.removeTabAt(lbTabs.indexOf(node.getID()));
                 lbTabs.remove(node.getID());
                 break;
+            case "Computation":
+                servicesPanels.remove(node.getID());
+                PService.removeTabAt(serviceTabs.indexOf(node.getID()));
+                serviceTabs.remove(node.getID());
         }
     }
 
     public void addRequest(EServiceNode node, EComputationPayload payload){
-        Object data[] = {payload.getRequestID(),payload.getClientID(),0,0,payload.getDeadline()};
+        Object data[] = {payload.getRequestID(),payload.getClientID(),"-",payload.getIteractions(),"-",payload.getDeadline(),payload.getCode()};
         switch(node.getServiceName()){
             case "LoadBalancer":
                 lbPanels.get(node.getID()).addRequest(data);
                 break;
+            case "Computation":
+                servicesPanels.get(node.getID()).addRequest(data);
         }
     }
 
     public void updateRequest(EServiceNode node, EComputationPayload payload){
-        Object data[] = {payload.getRequestID(),payload.getClientID(),0,0,payload.getDeadline()};
+        Object[] data;
+        switch(payload.getCode()){
+            default:
+                data=new Object[]{payload.getRequestID(),payload.getClientID(),"-",payload.getIteractions(),"-",payload.getDeadline(),payload.getCode()};
+                break;
+            case 2:
+                data=new Object[]{payload.getRequestID(),payload.getClientID(),payload.getServerID(),payload.getIteractions(),payload.getPI(),payload.getDeadline(),payload.getCode()};
+                break;
+            case 3:
+                data=new Object[]{payload.getRequestID(),payload.getClientID(),payload.getServerID(),payload.getIteractions(),-1,payload.getDeadline(),payload.getCode()};
+                break;
+        }
         switch(node.getServiceName()){
             case "LoadBalancer":
-                lbPanels.get(node.getID()).addRequest(data);
+                lbPanels.get(node.getID()).updateRequest(data);
+                break;
+            case "Computation":
+                servicesPanels.get(node.getID()).updateRequest(data);
                 break;
         }
     }
@@ -86,17 +110,27 @@ public class MonitorGUI extends javax.swing.JFrame {
             case "LoadBalancer":
                 lbPanels.get(node.getID()).deleteRequest(payload.getRequestID());
                 break;
+            case "Computation":
+                servicesPanels.get(node.getID()).deleteRequest(payload.getRequestID());
         }
     }
 
     public void heartBeat(EServiceNode node, EStatus status){
         PanelMonitor p=null;
+        Color c;
         switch(node.getServiceName()){
             case "LoadBalancer":
                 p=lbPanels.get(node.getID());
-                Color c = getBackgroundColor(status);
+                c = getBackgroundColor(status);
                 if(c!=null){
                     PLoadBalancer.setBackgroundAt(lbTabs.get(node.getID()),c );
+                }
+                break;
+            case "Computation":
+                p=servicesPanels.get(node.getID());
+                c = getBackgroundColor(status);
+                if(c!=null){
+                    PService.setBackgroundAt(lbTabs.get(node.getID()),c );
                 }
                 break;
         }

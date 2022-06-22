@@ -17,7 +17,9 @@ import Common.Entities.SingletonLogger;
 import Common.Entities.TopologyChangePayload;
 import Common.Enums.EColor;
 import Common.Enums.EMessageType;
+import Common.Enums.EStatus;
 import Common.Threads.TSocket;
+import Monitor.GUI.MonitorGUI;
 import Monitor.Interfaces.IMonitor;
 
 public class EMonitor extends Thread implements IMonitor {
@@ -28,6 +30,7 @@ public class EMonitor extends Thread implements IMonitor {
     private int heartBeatPeriod;
     private ServerSocket socket;
     private final SingletonLogger logger = SingletonLogger.getInstance();
+    private MonitorGUI monitorGUI;
 
     public EMonitor(int port, int heartBeatWindowSize, int heartBeatPeriod) throws IOException {
         this.socket = new ServerSocket(port);
@@ -35,6 +38,7 @@ public class EMonitor extends Thread implements IMonitor {
         this.heartBeatPeriod = heartBeatPeriod;
         this.serviceDiscovery = new EServiceDiscovery();
         this.servicesDependencies = new HashMap<>();
+        this.monitorGUI=new MonitorGUI(this);
     }
 
     public void updateMonitor(int port, int heartBeatWindowSize, int heartBeatPeriod) throws IOException {
@@ -76,6 +80,7 @@ public class EMonitor extends Thread implements IMonitor {
 
                     // registry service
                     EServiceNode registriedNode = this.serviceDiscovery.registry(registry.getServiceName(), registry.getPort());
+                    monitorGUI.addService(registriedNode);
 
                     // save its dependencies
                     this.dependencies(registriedNode.getID(), registry.getDependencies());
@@ -164,11 +169,13 @@ public class EMonitor extends Thread implements IMonitor {
 
                 // send heart beat
                 heartBeatSocket.send(new EMessage(EMessageType.Heartbeat, null));
+                monitorGUI.heartBeat(node, EStatus.heartBeat);
 
                 // check response
                 EMessage response = (EMessage) heartBeatSocket.receive();
                 if(response.getMessageType() == EMessageType.Heartbeat) {
                     // restart counter when there is a correct response
+                    monitorGUI.heartBeat(node, EStatus.active);
                     counter = 0;
                 }
             }
@@ -176,10 +183,12 @@ public class EMonitor extends Thread implements IMonitor {
             catch(IOException | ClassNotFoundException e) {
                 counter++;
                 this.logger.log(String.format("Service %s -> %d", node.toString(), counter));
+                monitorGUI.heartBeat(node, EStatus.notResponding);
             }
         }
         node.deactivate();
         this.logger.log(String.format("Node %s deactivated", node.toString()));
+        monitorGUI.heartBeat(node, EStatus.stopped);
         heartBeatSocket.close();
         this.topologyChange(node.getServiceName());
     }

@@ -38,7 +38,7 @@ public class PanelMonitor extends JPanel {
 
         table=new CustomTable();
         table.setEnabled(false);
-        table.setModel(new javax.swing.table.DefaultTableModel(data, new String[] {"RequestID","ClientID","ServerID","Status"}));
+        table.setModel(new javax.swing.table.DefaultTableModel(data, new String[] {"RequestID","ClientID","ServerID","NI","Pi","Deadline","Status"}));
         JScrollPane scrollPane = new JScrollPane();
         scrollPane.setBounds(20,100,615,300);
         this.add(scrollPane);
