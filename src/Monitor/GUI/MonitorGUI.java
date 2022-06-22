@@ -82,7 +82,18 @@ public class MonitorGUI extends javax.swing.JFrame {
     }
 
     public void addRequest(EServiceNode node, EComputationPayload payload){
-        Object data[] = {payload.getRequestID(),payload.getClientID(),"-",payload.getIteractions(),"-",payload.getDeadline(),payload.getCode()};
+        Object[] data;
+        switch(payload.getCode()){
+            case 2:
+                data=new Object[]{payload.getRequestID(),payload.getClientID(),payload.getServerID(),payload.getIteractions(),payload.getPI(),payload.getDeadline(),payload.getCode()};
+                break;
+            case 3:
+                data=new Object[]{payload.getRequestID(),payload.getClientID(),payload.getServerID(),payload.getIteractions(),-1,payload.getDeadline(),payload.getCode()};
+                break;
+            default:
+                data=new Object[]{payload.getRequestID(),payload.getClientID(),"-",payload.getIteractions(),"-",payload.getDeadline(),payload.getCode()};
+                break;
+        }
         switch(node.getServiceName()){
             case "LoadBalancer":
                 lbPanels.get(node.getID()).addRequest(data);

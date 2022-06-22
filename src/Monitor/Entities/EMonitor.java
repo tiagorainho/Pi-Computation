@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import Common.Entities.EComputationPayload;
 import Common.Entities.EMessage;
 import Common.Entities.EMessageRegistry;
 import Common.Entities.EServiceNode;
@@ -71,6 +72,30 @@ public class EMonitor extends Thread implements IMonitor {
             EMessage message = clientSocket.receive();
 
             switch(message.getMessageType()) {
+                case ComputationRequest-> {
+                    Object[] payload=(Object[])message.getMessage();
+                    EServiceNode node = (EServiceNode)payload[0];
+                    EComputationPayload comp = (EComputationPayload)payload[1];
+                    System.out.println(node.toString()+comp.toString());
+                    monitorGUI.addRequest(node, comp);
+                    break;
+                }
+
+                case ComputationRejection-> {
+                    Object[] payload=(Object[])message.getMessage();
+                    EServiceNode node = (EServiceNode)payload[0];
+                    EComputationPayload comp = (EComputationPayload)payload[1];
+                    monitorGUI.addRequest(node, comp);
+                    break;
+                }
+
+                case ComputationResult-> {
+                    Object[] payload=(Object[])message.getMessage();
+                    EServiceNode node = (EServiceNode)payload[0];
+                    EComputationPayload comp = (EComputationPayload)payload[1];
+                    monitorGUI.addRequest(node, comp);
+                    break;
+                }
 
                 case RegisterServiceRegistry -> {
 

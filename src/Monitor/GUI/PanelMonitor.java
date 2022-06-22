@@ -5,7 +5,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.border.EmptyBorder;
 
 import Common.Entities.EMessage;
 import Common.Enums.EStatus;

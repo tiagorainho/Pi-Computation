@@ -1,8 +1,6 @@
 package Common.Entities;
 
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
 
 import Common.Interfaces.IDeepCopyable;
 import Common.Interfaces.IServiceNode;
@@ -14,7 +12,6 @@ public class EServiceNode implements IServiceNode, Serializable, IDeepCopyable {
     private Integer port;
     private final Integer desiredPort;
     private boolean active;
-    private Map<String, Object> params;
     private int weight;
 
     public EServiceNode(int id, String serviceName, int desiredPort, int port) {
@@ -24,7 +21,6 @@ public class EServiceNode implements IServiceNode, Serializable, IDeepCopyable {
         this.port = port;
         this.desiredPort = desiredPort;
         this.active = true;
-        this.params = new HashMap<>();
     }
 
     public Integer getDesiredPort() { return this.desiredPort; }

@@ -26,6 +26,7 @@ public class EClient extends Thread {
     private final int retryWaitPeriod = 200;
     private final String ClientServiceName = "Client";
     private ClientGUI clientGUI;
+    private int serviceRegistryPort;
 
     public EClient(){
         this.requestCounter = new AtomicInteger(0);
@@ -33,6 +34,8 @@ public class EClient extends Thread {
     }
 
     public void startClient(int serviceRegistryPort, int serverPort) throws Exception {
+        this.serviceRegistryPort=serviceRegistryPort;
+
         // try to connect to service registry
         TSocket socket = null;
         try {
@@ -90,6 +93,11 @@ public class EClient extends Thread {
     
                     socket = new TSocket(loadBalancerPort);
                     socket.send(message);
+
+                    //send error code to monitor
+                    TSocket requestMonitorSocket = new TSocket(this.serviceRegistryPort);
+                    requestMonitorSocket.send(new EMessage(EMessageType.ComputationRequest, new Object[]{this.node,payload}));
+                    requestMonitorSocket.close();
                     return;
                 }
                 catch(Exception e) {
@@ -147,12 +155,22 @@ public class EClient extends Thread {
                     EComputationPayload payload = (EComputationPayload) message.getMessage();
                     clientGUI.updateRequest(payload);
 
+                    //send error code to monitor
+                    TSocket errorMonitorSocket = new TSocket(this.serviceRegistryPort);
+                    errorMonitorSocket.send(new EMessage(EMessageType.ComputationRejection, new Object[]{this.node,payload}));
+                    errorMonitorSocket.close();
+
                     System.out.println(String.format("%s: %s", messageType.toString(), (payload==null)? "":payload.toString()));
                 }
 
                 case ComputationResult -> {
                     EComputationPayload payload = (EComputationPayload) message.getMessage();
                     clientGUI.updateRequest(payload);
+
+                    //send result code to monitor
+                    TSocket resultMonitorSocket = new TSocket(this.serviceRegistryPort);
+                    resultMonitorSocket.send(new EMessage(EMessageType.ComputationResult, new Object[]{this.node,payload}));
+                    resultMonitorSocket.close();
 
                     System.out.println(String.format("%s: %s", messageType.toString(), (payload==null)? "":payload.toString()));
                 }

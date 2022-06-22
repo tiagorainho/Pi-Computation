@@ -25,6 +25,7 @@ public class EServerManager extends Thread {
     private ServiceGUI serviceGUI;
     private final int sendRetrials = 3;
     private final int retrialWaitPeriod = 500;
+    private int serviceRegistryPort;
 
     public EServerManager() {
         this.serviceGUI=new ServiceGUI(this);
@@ -32,6 +33,7 @@ public class EServerManager extends Thread {
 
     public void startServer(int serviceRegistryPort, int port, int maxFifoSize) throws Exception {
         this.server = new EComputationServer(maxFifoSize);
+        this.serviceRegistryPort=serviceRegistryPort;
 
         // try to connect to service registry
         TSocket socket = null;
@@ -118,6 +120,11 @@ public class EServerManager extends Thread {
                     request.setServerID(this.node.getID());
                     serviceGUI.addRequest(request);
 
+                    //send error code to monitor
+                    TSocket requestMonitorSocket = new TSocket(this.serviceRegistryPort);
+                    requestMonitorSocket.send(new EMessage(EMessageType.ComputationRequest, new Object[]{this.node,request}));
+                    requestMonitorSocket.close();
+
                     Integer loadBalancerPort = request.getLoadbalancerPort();
 
                     Double pi = this.server.computePI(request.getIteractions(), request.getDeadline());
@@ -130,6 +137,11 @@ public class EServerManager extends Thread {
 
                         request.setCode(3);
                         serviceGUI.updateRequest(request);
+
+                        //send error code to monitor
+                        TSocket errorMonitorSocket = new TSocket(this.serviceRegistryPort);
+                        errorMonitorSocket.send(new EMessage(EMessageType.ComputationRejection, new Object[]{this.node,request}));
+                        errorMonitorSocket.close();
 
                         // notify the load balancer with N retrials
                         for(int i=0; i<this.sendRetrials;i++) {
@@ -155,6 +167,11 @@ public class EServerManager extends Thread {
                     serviceGUI.updateRequest(request);
 
                     response = new EMessage(EMessageType.ComputationResult, request);
+
+                    //send error code to monitor
+                    TSocket responseMonitorSocket = new TSocket(this.serviceRegistryPort);
+                    responseMonitorSocket.send(new EMessage(EMessageType.ComputationResult, new Object[]{this.node,request}));
+                    responseMonitorSocket.close();
 
                     this.logger.log(String.format("Sending success response to Load Balancer on port %d: %s", loadBalancerPort, response.toString()), EColor.GREEN);
 

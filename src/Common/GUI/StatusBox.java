@@ -13,12 +13,12 @@ public class StatusBox extends javax.swing.JTextField{
     //Border Settings and Colors
     private static final int borderWidth=2;
     private static final Border black=BorderFactory.createLineBorder(Color.black, borderWidth);
-    private static final Border red = BorderFactory.createLineBorder(Color.red,borderWidth);
     private final ReentrantLock rl=new ReentrantLock();     
     
     public StatusBox(int x, int y){
         this.setHorizontalAlignment(JTextField.CENTER);
-        this.setBackground(Color.GREEN);
+        this.setVisible(true);
+        this.setBackground(Color.RED);
         this.setFocusable(false);
         this.setBorder(black);
         this.setBounds(x, y, 15, 15);

@@ -36,6 +36,7 @@ public class ELoadBalancerManager extends Thread {
     private final List<String> dependenciesList = List.of(LBserviceName, ComputationServiceName);
     private final Map<String, List<EServiceNode>> dependentNodesByService;
     private Map<Integer, EComputationPayload> pendingComputations;
+    private int serviceRegistryPort;
     private LoadBalancerGUI lbGUI;
 
     private final SingletonLogger logger = SingletonLogger.getInstance();
@@ -49,6 +50,7 @@ public class ELoadBalancerManager extends Thread {
     public void startLoadBalancer(int serviceRegistryPort, int weightPerNode, int masterLoadBalancerPort) throws Exception {
         
         this.masterLoadBalancerPort = masterLoadBalancerPort;
+        this.serviceRegistryPort=serviceRegistryPort;
 
         // try to connect to service registry
         this.loadBalancer = new ELoadBalancer();
@@ -86,6 +88,7 @@ public class ELoadBalancerManager extends Thread {
                 throw new Exception("Error in the registry response");
             }
 
+            lbGUI.heartBeat(node, EStatus.active);
             lbGUI.setTitle("Load Balancer "+node.getID());
 
             // wait until it becomes the main load balancer
@@ -312,7 +315,12 @@ public class ELoadBalancerManager extends Thread {
                             EServiceNode nodeToRequest = this.loadBalancer.load(rejectedPayload);
 
                             this.logger.log(String.format("Computation Server: resend %s to %s", rejectedPayload.toString(), nodeToRequest.toString()), EColor.GREEN);
-    
+                            
+                            //send request code to monitor
+                            TSocket requestMonitorSocket = new TSocket(this.serviceRegistryPort);
+                            requestMonitorSocket.send(new EMessage(EMessageType.ComputationRequest, new Object[]{this.node,rejectedPayload}));
+                            requestMonitorSocket.close();
+
                             // proxy the request to a server
                             TSocket newRequestSocket = new TSocket(nodeToRequest.getPort());
                             newRequestSocket.send(new EMessage(EMessageType.ComputationRequest, rejectedPayload));
@@ -322,6 +330,11 @@ public class ELoadBalancerManager extends Thread {
                             this.logger.log(String.format("Computation Server: return error response: %s", rejectedPayload.toString()), EColor.RED);
 
                             rejectedPayload.setServerID(null);
+
+                            //send error code to monitor
+                            TSocket errorMonitorSocket = new TSocket(this.serviceRegistryPort);
+                            errorMonitorSocket.send(new EMessage(EMessageType.ComputationRejection, new Object[]{this.node,rejectedPayload}));
+                            errorMonitorSocket.close();
 
                             // proxy the request to the client
                             TSocket errorSocket = new TSocket(rejectedPayload.getClientPort());
@@ -335,6 +348,10 @@ public class ELoadBalancerManager extends Thread {
                     EComputationPayload computationPayload = (EComputationPayload) message.getMessage();
 
                     computationPayload.setLoadBalancerPort(this.node.getPort());
+                    //send request code to monitor
+                    TSocket requestMonitorSocket = new TSocket(this.serviceRegistryPort);
+                    requestMonitorSocket.send(new EMessage(EMessageType.ComputationRequest, new Object[]{this.node,computationPayload}));
+                    requestMonitorSocket.close();
                 
                     this.logger.log(String.format("Computation request on %s: %s", this.node.toString(), computationPayload.toString()), EColor.GREEN);
 
@@ -344,6 +361,12 @@ public class ELoadBalancerManager extends Thread {
 
                         computationPayload.setCode(3);
 
+                        //send error code to monitor
+                        TSocket errorMonitorSocket = new TSocket(this.serviceRegistryPort);
+                        errorMonitorSocket.send(new EMessage(EMessageType.ComputationRejection, new Object[]{this.node,computationPayload}));
+                        errorMonitorSocket.close();
+
+                        //send error code to client
                         TSocket errorSocket = new TSocket(computationPayload.getClientPort());
                         errorSocket.send(new EMessage(EMessageType.ComputationRejection, computationPayload));
                         errorSocket.close();
@@ -358,6 +381,11 @@ public class ELoadBalancerManager extends Thread {
 
                     // save the pending computation
                     this.pendingComputations.put(computationPayload.getRequestID(), computationPayload);
+
+                    //send result code to monitor
+                    TSocket resultMonitorSocket = new TSocket(this.serviceRegistryPort);
+                    resultMonitorSocket.send(new EMessage(EMessageType.ComputationResult, new Object[]{this.node,computationPayload}));
+                    resultMonitorSocket.close();
 
                     // proxy the request to a server
                     TSocket newRequestSocket = new TSocket(nodeToRequest.getPort());
@@ -379,6 +407,11 @@ public class ELoadBalancerManager extends Thread {
                     
                     computationPayload.setServerID(null);
 
+                    //send error code to monitor
+                    TSocket errorMonitorSocket = new TSocket(this.serviceRegistryPort);
+                    errorMonitorSocket.send(new EMessage(EMessageType.ComputationRejection, new Object[]{this.node,computationPayload}));
+                    errorMonitorSocket.close();
+
                     // proxy error back to the user that the server cannot handle more computations
                     TSocket errorSocket = new TSocket(computationPayload.getClientPort());
                     errorSocket.send(new EMessage(EMessageType.ComputationRejection, computationPayload));
@@ -395,6 +428,11 @@ public class ELoadBalancerManager extends Thread {
                     EComputationPayload computationResultPayload = (EComputationPayload) message.getMessage();
 
                     this.logger.log(String.format("Computation Result on request %s", computationResultPayload.toString()), EColor.GREEN);
+
+                    //send result code to monitor
+                    TSocket resultMonitorSocket = new TSocket(this.serviceRegistryPort);
+                    resultMonitorSocket.send(new EMessage(EMessageType.ComputationResult, new Object[]{this.node,computationResultPayload}));
+                    resultMonitorSocket.close();
 
                     this.pendingComputations.remove(computationResultPayload.getRequestID());
 
