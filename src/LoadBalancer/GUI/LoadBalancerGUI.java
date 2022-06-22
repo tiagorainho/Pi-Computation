@@ -276,11 +276,19 @@ public class LoadBalancerGUI extends javax.swing.JFrame {
         }
         try{
             if(masterPort!=-100){
-                try {
-                    lb.startLoadBalancer(serviceRegistryPort, weight, masterPort);
-                } catch (Exception e) {
-                    System.out.println(e.getMessage());
-                }
+                final int a=serviceRegistryPort;
+                final int b=weight;
+                final int c=masterPort;
+                new Thread(()->{
+                    try {
+                        lb.startLoadBalancer(a, b, c);
+                    } catch (Exception e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }).start();
+                
+
             }
         } catch(Exception e){
             System.out.println("Failed to create new EMonitor instance");

@@ -1,12 +1,13 @@
 package LoadBalancer.Entities;
 
+import java.io.Serializable;
 import java.util.Comparator;
 import java.util.List;
 
 import Common.Entities.EComputationPayload;
 import Common.Entities.EServiceNode;
 
-public class ELoadBalancer {
+public class ELoadBalancer implements Serializable {
 
     private List<EServiceNode> nodes;
     
