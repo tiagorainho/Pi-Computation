@@ -232,7 +232,7 @@ public class ServiceGUI extends javax.swing.JFrame {
         try{
             if(serviceRegistryPort!=-100){
                 try {
-                    server.startServer(serviceRegistryPort, port);
+                    server.startServer(serviceRegistryPort, port,2);
                 } catch (Exception e) {
                     System.out.println(e.getMessage());
                 }

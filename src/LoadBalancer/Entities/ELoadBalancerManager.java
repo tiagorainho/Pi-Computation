@@ -92,7 +92,10 @@ public class ELoadBalancerManager extends Thread {
             this.waitUntilMaster(serviceRegistryPort);
 
             // start load balancing thread
-            this.run();
+            new Thread(()->{
+                this.run();
+            }).start();
+            
         }
         catch(Exception e) {
             e.printStackTrace();
